@@ -5,31 +5,66 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma/client"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
+  extensions = [uuid]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   
   expenses   Expense[]
   incomes    Income[]
   harvests   Harvest[]
   activities Activity[]
+  accounts   Account[]
+  sessions   Session[]
   
   @@map("users")
 }
 
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
 model Expense {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   userId      String
   category    String   // insumos, mano_de_obra, mantenimiento, transporte, etc.
   description String?
@@ -44,7 +79,7 @@ model Expense {
 }
 
 model Income {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   userId      String
   source      String   // venta_cosechas, otros
   description String?
@@ -59,7 +94,7 @@ model Income {
 }
 
 model Harvest {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   userId      String
   parcela     String
   cantidad    Decimal  @db.Decimal(10, 2)
@@ -75,7 +110,7 @@ model Harvest {
 }
 
 model Activity {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   userId      String
   tipo        String   // siembra, abono, fumigacion, poda, riego
   parcela     String

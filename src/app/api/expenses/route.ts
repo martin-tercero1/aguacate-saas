@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/supabase/auth'
+import { SupabaseService } from '@/lib/supabase/services'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getCurrentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
-
-    const expenses = await prisma.expense.findMany({
-      where: { userId: user.id },
-      orderBy: { date: 'desc' }
-    })
+    const supabaseService = new SupabaseService()
+    const expenses = await supabaseService.getExpenses(user.id)
 
     return NextResponse.json(expenses)
   } catch (error) {
@@ -33,20 +22,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getCurrentUser()
     
-    if (!session?.user?.email) {
+    if (!user?.id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
-
+    const supabaseService = new SupabaseService()
     const { category, description, amount, date } = await req.json()
 
     if (!category || !amount || !date) {
@@ -56,14 +38,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const expense = await prisma.expense.create({
-      data: {
-        userId: user.id,
-        category,
-        description,
-        amount: parseFloat(amount),
-        date: new Date(date)
-      }
+    const expense = await supabaseService.createExpense(user.id, {
+      category,
+      description,
+      amount: parseFloat(amount),
+      date
     })
 
     return NextResponse.json(expense)

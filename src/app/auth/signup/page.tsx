@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { signUp } from '@/lib/supabase/auth-client'
 
 export default function SignUp() {
   const [name, setName] = useState('')
@@ -26,39 +27,26 @@ export default function SignUp() {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name, email, password })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        router.push('/auth/signin?message=Registro exitoso')
-      } else {
-        setError(data.error || 'Error al registrarse')
-      }
-    } catch (error) {
-      setError('Error al registrarse')
+      await signUp(email, password, name)
+      router.push('/auth/signin?message=Registro exitoso. Por favor, inicia sesión.')
+    } catch (error: any) {
+      setError(error.message || 'Error al registrarse')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/10">
+      <div className="bg-card p-8 rounded-lg shadow-md w-full max-w-md border border-border">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">🥑 Aguacate SaaS</h1>
-          <p className="text-gray-600 mt-2">Crea tu cuenta</p>
+          <h1 className="text-2xl font-bold text-foreground">🥑 Aguacate SaaS</h1>
+          <p className="text-muted-foreground mt-2">Crea tu cuenta</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
               Nombre
             </label>
             <input
@@ -66,13 +54,13 @@ export default function SignUp() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
               Email
             </label>
             <input
@@ -80,13 +68,13 @@ export default function SignUp() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
               Contraseña
             </label>
             <input
@@ -94,13 +82,13 @@ export default function SignUp() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-1">
               Confirmar Contraseña
             </label>
             <input
@@ -108,18 +96,18 @@ export default function SignUp() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               required
             />
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm">{error}</div>
+            <div className="text-destructive text-sm">{error}</div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full"
             disabled={isLoading}
           >
             {isLoading ? 'Registrando...' : 'Registrarse'}
@@ -127,9 +115,9 @@ export default function SignUp() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/auth/signin" className="text-green-600 hover:text-green-700">
+            <Link href="/auth/signin" className="text-primary hover:text-primary/80">
               Inicia sesión
             </Link>
           </p>

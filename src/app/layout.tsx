@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat, Merriweather, Source_Code_Pro } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fontSans = Montserrat({
   subsets: ["latin"],
+  variable: "--font-sans",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fontSerif = Merriweather({
   subsets: ["latin"],
+  variable: "--font-serif",
+});
+
+const fontMono = Source_Code_Pro({
+  subsets: ["latin"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -26,15 +31,8 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased `}
     >
-      <head>
-        <script
-          async
-          crossOrigin="anonymous"
-          src="https://tweakcn.com/live-preview.min.js"
-        />
-      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           {children}

@@ -1,10 +1,14 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { signOut } from 'next-auth/react'
+import { ExpenseForm } from '@/components/expense-form'
+import { IncomeForm } from '@/components/income-form'
+import { ExpenseList } from '@/components/expense-list'
+import { IncomeList } from '@/components/income-list'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface DashboardData {
   totalExpenses: number
@@ -16,22 +20,29 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
-  const { data: session, status } = useSession()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [showIncomeForm, setShowIncomeForm] = useState(false)
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/auth/signin')
+  }
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!loading && !user) {
       router.push('/auth/signin')
     }
-  }, [status, router])
+  }, [user, loading, router])
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (user) {
       fetchDashboardData()
     }
-  }, [status])
+  }, [user])
 
   const fetchDashboardData = async () => {
     try {
@@ -43,11 +54,21 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
-      setLoading(false)
+      setDataLoading(false)
     }
   }
 
-  if (status === 'loading' || loading) {
+  const handleExpenseSuccess = () => {
+    setShowExpenseForm(false)
+    fetchDashboardData()
+  }
+
+  const handleIncomeSuccess = () => {
+    setShowIncomeForm(false)
+    fetchDashboardData()
+  }
+
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Cargando...</div>
@@ -55,21 +76,22 @@ export default function Dashboard() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">🥑 Aguacate SaaS</h1>
+            <h1 className="text-2xl font-bold text-foreground">🥑 Aguacate SaaS</h1>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Hola, {session.user?.name}</span>
+              <span className="text-sm text-muted-foreground">Hola, {user.user_metadata?.name || user.email}</span>
+              <ThemeToggle />
               <Button 
                 variant="outline" 
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="text-sm"
               >
                 Cerrar Sesión
@@ -81,64 +103,71 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-          <p className="text-gray-600 mt-2">Resumen de tus finanzas</p>
+          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+          <p className="text-muted-foreground mt-2">Resumen de tus finanzas</p>
         </div>
 
         {dashboardData && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-700">Gastos Totales</h3>
+                <h3 className="text-lg font-semibold text-foreground">Gastos Totales</h3>
                 <div className="text-2xl">💰</div>
               </div>
-              <div className="text-3xl font-bold text-red-600">
+              <div className="text-3xl font-bold text-destructive">
                 C$ {dashboardData.totalExpenses.toFixed(2)}
               </div>
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-muted-foreground mt-2">
                 Este mes: C$ {dashboardData.currentMonthExpenses.toFixed(2)}
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-700">Ingresos Totales</h3>
+                <h3 className="text-lg font-semibold text-foreground">Ingresos Totales</h3>
                 <div className="text-2xl">📈</div>
               </div>
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-3xl font-bold text-primary">
                 C$ {dashboardData.totalIncomes.toFixed(2)}
               </div>
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-muted-foreground mt-2">
                 Este mes: C$ {dashboardData.currentMonthIncomes.toFixed(2)}
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-700">Ganancia Neta</h3>
+                <h3 className="text-lg font-semibold text-foreground">Ganancia Neta</h3>
                 <div className="text-2xl">🎯</div>
               </div>
-              <div className={`text-3xl font-bold ${dashboardData.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-3xl font-bold ${dashboardData.totalProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
                 C$ {dashboardData.totalProfit.toFixed(2)}
               </div>
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-sm text-muted-foreground mt-2">
                 Este mes: C$ {dashboardData.currentMonthProfit.toFixed(2)}
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-card p-6 rounded-lg shadow-md border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-700">Acciones Rápidas</h3>
+              <h3 className="text-lg font-semibold text-foreground">Acciones Rápidas</h3>
             </div>
             <div className="space-y-3">
-              <Button className="w-full bg-green-600 hover:bg-green-700">
-                + Registrar Gasto
+              <Button 
+                className="w-full bg-destructive hover:bg-destructive/90"
+                onClick={() => setShowExpenseForm(!showExpenseForm)}
+              >
+                {showExpenseForm ? 'Cancelar' : '+ Registrar Gasto'}
               </Button>
-              <Button variant="outline" className="w-full">
-                + Registrar Ingreso
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowIncomeForm(!showIncomeForm)}
+              >
+                {showIncomeForm ? 'Cancelar' : '+ Registrar Ingreso'}
               </Button>
               <Button variant="outline" className="w-full">
                 + Ver Todos los Gastos
@@ -149,29 +178,46 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumen Mensual</h3>
+          <div className="bg-card p-6 rounded-lg shadow-md border border-border">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Resumen Mensual</h3>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+              <div className="flex justify-between items-center p-3 bg-muted rounded">
                 <span className="text-sm font-medium">Gastos</span>
-                <span className="text-sm font-bold text-red-600">
+                <span className="text-sm font-bold text-destructive">
                   C$ {dashboardData?.currentMonthExpenses.toFixed(2) || '0.00'}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+              <div className="flex justify-between items-center p-3 bg-muted rounded">
                 <span className="text-sm font-medium">Ingresos</span>
-                <span className="text-sm font-bold text-green-600">
+                <span className="text-sm font-bold text-primary">
                   C$ {dashboardData?.currentMonthIncomes.toFixed(2) || '0.00'}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+              <div className="flex justify-between items-center p-3 bg-primary/10 rounded">
                 <span className="text-sm font-medium">Ganancia</span>
-                <span className={`text-sm font-bold ${(dashboardData?.currentMonthProfit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-sm font-bold ${(dashboardData?.currentMonthProfit ?? 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
                   C$ {dashboardData?.currentMonthProfit.toFixed(2) || '0.00'}
                 </span>
               </div>
             </div>
           </div>
+        </div>
+
+        {showExpenseForm && (
+          <div className="mb-8 flex justify-center">
+            <ExpenseForm onSuccess={handleExpenseSuccess} />
+          </div>
+        )}
+
+        {showIncomeForm && (
+          <div className="mb-8 flex justify-center">
+            <IncomeForm onSuccess={handleIncomeSuccess} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ExpenseList />
+          <IncomeList />
         </div>
       </div>
     </div>
