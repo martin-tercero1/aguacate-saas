@@ -79,3 +79,57 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+
+export async function PUT(req: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const supabaseService = new SupabaseService()
+    const { id, tipo, parcela, descripcion, fecha, estado } = await req.json()
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
+    }
+
+    const activity = await supabaseService.updateActivity(user.id, id, {
+      tipo,
+      parcela,
+      descripcion,
+      fecha,
+      estado
+    })
+
+    return NextResponse.json(activity)
+  } catch (error) {
+    console.error('Error al actualizar actividad:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const supabaseService = new SupabaseService()
+    const { id } = await req.json()
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
+    }
+
+    await supabaseService.deleteActivity(user.id, id)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error al eliminar actividad:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

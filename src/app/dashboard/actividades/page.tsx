@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Modal } from '@/components/ui/modal'
 import { CalendarView } from '@/components/ui/calendar-view'
-import { ClipboardList, Plus, Clock, CheckCircle2, Circle, Loader2, List, CalendarDays } from 'lucide-react'
+import { ClipboardList, Plus, Clock, CheckCircle2, Circle, Loader2, List, CalendarDays, Pencil, Trash2 } from 'lucide-react'
 
 interface Activity {
   id: string
@@ -55,6 +55,9 @@ export default function ActividadesPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filter, setFilter] = useState<string>('todos')
   const [activeView, setActiveView] = useState('lista')
@@ -92,6 +95,7 @@ export default function ActividadesPage() {
       fecha: new Date().toISOString().split('T')[0],
       estado: 'pendiente'
     })
+    setEditingActivity(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,10 +103,16 @@ export default function ActividadesPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/activities', {
-        method: 'POST',
+      const url = '/api/activities'
+      const method = editingActivity ? 'PUT' : 'POST'
+      const body = editingActivity 
+        ? { id: editingActivity.id, ...formData }
+        : formData
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
@@ -134,6 +144,43 @@ export default function ActividadesPage() {
     } catch (error) {
       console.error('Error updating status:', error)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/activities', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteTarget.id })
+      })
+
+      if (response.ok) {
+        setShowDeleteModal(false)
+        setDeleteTarget(null)
+        fetchActivities()
+      } else {
+        alert('Error al eliminar actividad')
+      }
+    } catch (error) {
+      alert('Error al eliminar actividad')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const openEditActivity = (activity: Activity) => {
+    setEditingActivity(activity)
+    setFormData({
+      tipo: activity.tipo,
+      parcela: activity.parcela,
+      descripcion: activity.descripcion || '',
+      fecha: activity.fecha.split('T')[0],
+      estado: activity.estado
+    })
+    setShowModal(true)
   }
 
   const handleCloseModal = () => {
@@ -292,7 +339,7 @@ export default function ActividadesPage() {
               </TabsList>
             </Tabs>
 
-            <Button onClick={() => setShowModal(true)} className="gap-2">
+            <Button onClick={() => { resetForm(); setShowModal(true) }} className="gap-2">
               <Plus className="h-4 w-4" />
               Nueva Actividad
             </Button>
@@ -304,8 +351,8 @@ export default function ActividadesPage() {
       <Modal
         isOpen={showModal}
         onClose={handleCloseModal}
-        title="Nueva Actividad"
-        description="Planifica una nueva tarea para tu finca"
+        title={editingActivity ? 'Editar Actividad' : 'Nueva Actividad'}
+        description={editingActivity ? 'Modifica los datos de la actividad' : 'Planifica una nueva tarea para tu finca'}
         icon={<ClipboardList className="h-5 w-5" />}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -373,10 +420,73 @@ export default function ActividadesPage() {
             />
           </div>
 
+          {editingActivity && (
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Select
+                value={formData.estado}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, estado: value || 'pendiente' }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona estado">
+                    {getEstadoConfig(formData.estado).label}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {estadoOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Registrando...' : 'Crear Actividad'}
+            {isSubmitting ? 'Guardando...' : editingActivity ? 'Guardar Cambios' : 'Crear Actividad'}
           </Button>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        title="Confirmar Eliminacion"
+        description="¿Estas seguro de eliminar esta actividad?"
+        icon={<Trash2 className="h-5 w-5 text-destructive" />}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Esta accion no se puede deshacer. Se eliminara permanentemente la actividad.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteModal(false)
+                setDeleteTarget(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Content Views */}
@@ -447,6 +557,26 @@ export default function ActividadesPage() {
                             })}
                           </SelectContent>
                         </Select>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditActivity(activity)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setDeleteTarget({ id: activity.id, name: getTipoLabel(activity.tipo) })
+                            setShowDeleteModal(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

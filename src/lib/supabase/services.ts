@@ -118,6 +118,47 @@ export class SupabaseService {
     }
   }
 
+  async updateExpense(userId: string, expenseId: string, expense: {
+    category?: string
+    description?: string
+    amount?: number
+    date?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({ ...expense, updatedAt: new Date().toISOString() })
+        .eq('id', expenseId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating expense:', error)
+      throw error
+    }
+  }
+
+  async deleteExpense(userId: string, expenseId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId)
+        .eq('userId', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting expense:', error)
+      throw error
+    }
+  }
+
   // Incomes CRUD
   async getIncomes(userId: string) {
     try {
@@ -160,6 +201,47 @@ export class SupabaseService {
       return data
     } catch (error) {
       console.error('Error creating income:', error)
+      throw error
+    }
+  }
+
+  async updateIncome(userId: string, incomeId: string, income: {
+    source?: string
+    description?: string
+    amount?: number
+    date?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('incomes')
+        .update({ ...income, updatedAt: new Date().toISOString() })
+        .eq('id', incomeId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating income:', error)
+      throw error
+    }
+  }
+
+  async deleteIncome(userId: string, incomeId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('incomes')
+        .delete()
+        .eq('id', incomeId)
+        .eq('userId', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting income:', error)
       throw error
     }
   }
@@ -273,6 +355,49 @@ export class SupabaseService {
     }
   }
 
+  async updateHarvest(userId: string, harvestId: string, harvest: {
+    parcela?: string
+    cantidad?: number
+    calidad?: string
+    variedad?: string
+    fechaCosecha?: string
+    precioUnitario?: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('harvests')
+        .update({ ...harvest, updatedAt: new Date().toISOString() })
+        .eq('id', harvestId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating harvest:', error)
+      throw error
+    }
+  }
+
+  async deleteHarvest(userId: string, harvestId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('harvests')
+        .delete()
+        .eq('id', harvestId)
+        .eq('userId', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting harvest:', error)
+      throw error
+    }
+  }
+
   // Activities CRUD
   async getActivities(userId: string) {
     try {
@@ -336,6 +461,48 @@ export class SupabaseService {
       return data
     } catch (error) {
       console.error('Error updating activity status:', error)
+      throw error
+    }
+  }
+
+  async updateActivity(userId: string, activityId: string, activity: {
+    tipo?: string
+    parcela?: string
+    descripcion?: string
+    fecha?: string
+    estado?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('activities')
+        .update({ ...activity, updatedAt: new Date().toISOString() })
+        .eq('id', activityId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating activity:', error)
+      throw error
+    }
+  }
+
+  async deleteActivity(userId: string, activityId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', activityId)
+        .eq('userId', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting activity:', error)
       throw error
     }
   }

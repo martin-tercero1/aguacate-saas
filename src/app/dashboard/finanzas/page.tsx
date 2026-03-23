@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { CalendarView } from '@/components/ui/calendar-view'
-import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpDown, List, CalendarDays } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpDown, List, CalendarDays, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 
 interface Expense {
   id: string
@@ -85,6 +85,10 @@ export default function FinanzasPage() {
   const [loading, setLoading] = useState(true)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [showIncomeModal, setShowIncomeModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'expense' | 'income', id: string, name: string } | null>(null)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null)
   const [activeTab, setActiveTab] = useState('gastos')
   const [activeView, setActiveView] = useState('lista')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -141,6 +145,7 @@ export default function FinanzasPage() {
       amount: '',
       date: new Date().toISOString().split('T')[0]
     })
+    setEditingExpense(null)
   }
 
   const resetIncomeForm = () => {
@@ -150,6 +155,7 @@ export default function FinanzasPage() {
       amount: '',
       date: new Date().toISOString().split('T')[0]
     })
+    setEditingIncome(null)
   }
 
   const handleExpenseSubmit = async (e: React.FormEvent) => {
@@ -157,10 +163,16 @@ export default function FinanzasPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
+      const url = '/api/expenses'
+      const method = editingExpense ? 'PUT' : 'POST'
+      const body = editingExpense 
+        ? { id: editingExpense.id, ...expenseForm }
+        : expenseForm
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseForm)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
@@ -183,10 +195,16 @@ export default function FinanzasPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/incomes', {
-        method: 'POST',
+      const url = '/api/incomes'
+      const method = editingIncome ? 'PUT' : 'POST'
+      const body = editingIncome 
+        ? { id: editingIncome.id, ...incomeForm }
+        : incomeForm
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(incomeForm)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
@@ -204,6 +222,54 @@ export default function FinanzasPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsSubmitting(true)
+
+    try {
+      const url = deleteTarget.type === 'expense' ? '/api/expenses' : '/api/incomes'
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteTarget.id })
+      })
+
+      if (response.ok) {
+        setShowDeleteModal(false)
+        setDeleteTarget(null)
+        fetchData()
+      } else {
+        alert('Error al eliminar registro')
+      }
+    } catch (error) {
+      alert('Error al eliminar registro')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const openEditExpense = (expense: Expense) => {
+    setEditingExpense(expense)
+    setExpenseForm({
+      category: expense.category,
+      description: expense.description || '',
+      amount: expense.amount.toString(),
+      date: expense.date.split('T')[0]
+    })
+    setShowExpenseModal(true)
+  }
+
+  const openEditIncome = (income: Income) => {
+    setEditingIncome(income)
+    setIncomeForm({
+      source: income.source,
+      description: income.description || '',
+      amount: income.amount.toString(),
+      date: income.date.split('T')[0]
+    })
+    setShowIncomeModal(true)
+  }
+
   // Helper functions to get labels
   const getCategoryLabel = (value: string) => {
     return categoryOptions.find(opt => opt.value === value)?.label || value
@@ -212,6 +278,10 @@ export default function FinanzasPage() {
   const getSourceLabel = (value: string) => {
     return sourceOptions.find(opt => opt.value === value)?.label || value
   }
+
+  // Get recent items
+  const recentExpenses = expenses.slice(0, 5)
+  const recentIncomes = incomes.slice(0, 5)
 
   // Convert to calendar events
   const expenseEvents = expenses.map((expense) => ({
@@ -252,6 +322,110 @@ export default function FinanzasPage() {
         </p>
       </div>
 
+      {/* Summary Section - Moved to Top */}
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
+        {/* Monthly Summary Card */}
+        {dashboardData && (
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-lg">Resumen Mensual</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg bg-red-50 p-3 dark:bg-red-950">
+                <span className="text-sm font-medium">Gastos</span>
+                <span className="text-sm font-bold text-destructive">
+                  C$ {dashboardData.currentMonthExpenses.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-green-50 p-3 dark:bg-green-950">
+                <span className="text-sm font-medium">Ingresos</span>
+                <span className="text-sm font-bold text-primary">
+                  C$ {dashboardData.currentMonthIncomes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+                <span className="text-sm font-medium">Balance</span>
+                <span
+                  className={`text-sm font-bold ${
+                    dashboardData.currentMonthProfit >= 0
+                      ? 'text-primary'
+                      : 'text-destructive'
+                  }`}
+                >
+                  C$ {dashboardData.currentMonthProfit.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Expenses */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-destructive" />
+              Ultimos Gastos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentExpenses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin gastos recientes</p>
+            ) : (
+              <div className="space-y-2">
+                {recentExpenses.map((expense) => (
+                  <div key={expense.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${categoryColors[expense.category]} text-xs`}>
+                        {getCategoryLabel(expense.category)}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        {new Date(expense.date).toLocaleDateString('es-NI', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+                    <span className="font-medium text-destructive">
+                      -C$ {expense.amount.toLocaleString('es-NI')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Incomes */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Ultimos Ingresos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentIncomes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin ingresos recientes</p>
+            ) : (
+              <div className="space-y-2">
+                {recentIncomes.map((income) => (
+                  <div key={income.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${sourceColors[income.source]} text-xs`}>
+                        {getSourceLabel(income.source)}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        {new Date(income.date).toLocaleDateString('es-NI', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+                    <span className="font-medium text-primary">
+                      +C$ {income.amount.toLocaleString('es-NI')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Stats Cards */}
       {dashboardData && (
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
@@ -266,9 +440,6 @@ export default function FinanzasPage() {
               <div className="text-2xl font-bold text-destructive">
                 C$ {dashboardData.totalExpenses.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthExpenses.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
-              </p>
             </CardContent>
           </Card>
 
@@ -283,16 +454,13 @@ export default function FinanzasPage() {
               <div className="text-2xl font-bold text-primary">
                 C$ {dashboardData.totalIncomes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthIncomes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
-              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Balance
+                Balance Total
               </CardTitle>
               <DollarSign className="h-4 w-4 text-primary" />
             </CardHeader>
@@ -306,9 +474,6 @@ export default function FinanzasPage() {
               >
                 C$ {dashboardData.totalProfit.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthProfit.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -346,7 +511,10 @@ export default function FinanzasPage() {
 
             {activeTab === 'gastos' ? (
               <Button
-                onClick={() => setShowExpenseModal(true)}
+                onClick={() => {
+                  resetExpenseForm()
+                  setShowExpenseModal(true)
+                }}
                 variant="destructive"
                 className="gap-2"
               >
@@ -355,7 +523,10 @@ export default function FinanzasPage() {
               </Button>
             ) : (
               <Button
-                onClick={() => setShowIncomeModal(true)}
+                onClick={() => {
+                  resetIncomeForm()
+                  setShowIncomeModal(true)
+                }}
                 className="gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -373,8 +544,8 @@ export default function FinanzasPage() {
           setShowExpenseModal(false)
           resetExpenseForm()
         }}
-        title="Registrar Gasto"
-        description="Agrega un nuevo gasto a tu finca"
+        title={editingExpense ? 'Editar Gasto' : 'Registrar Gasto'}
+        description={editingExpense ? 'Modifica los datos del gasto' : 'Agrega un nuevo gasto a tu finca'}
         icon={<TrendingDown className="h-5 w-5" />}
       >
         <form onSubmit={handleExpenseSubmit} className="space-y-4">
@@ -443,7 +614,7 @@ export default function FinanzasPage() {
           </div>
 
           <Button type="submit" variant="destructive" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Registrando...' : 'Registrar Gasto'}
+            {isSubmitting ? 'Guardando...' : editingExpense ? 'Guardar Cambios' : 'Registrar Gasto'}
           </Button>
         </form>
       </Modal>
@@ -455,8 +626,8 @@ export default function FinanzasPage() {
           setShowIncomeModal(false)
           resetIncomeForm()
         }}
-        title="Registrar Ingreso"
-        description="Agrega un nuevo ingreso a tu finca"
+        title={editingIncome ? 'Editar Ingreso' : 'Registrar Ingreso'}
+        description={editingIncome ? 'Modifica los datos del ingreso' : 'Agrega un nuevo ingreso a tu finca'}
         icon={<TrendingUp className="h-5 w-5" />}
       >
         <form onSubmit={handleIncomeSubmit} className="space-y-4">
@@ -525,9 +696,47 @@ export default function FinanzasPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Registrando...' : 'Registrar Ingreso'}
+            {isSubmitting ? 'Guardando...' : editingIncome ? 'Guardar Cambios' : 'Registrar Ingreso'}
           </Button>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        title="Confirmar Eliminacion"
+        description={`¿Estas seguro de eliminar este ${deleteTarget?.type === 'expense' ? 'gasto' : 'ingreso'}?`}
+        icon={<Trash2 className="h-5 w-5 text-destructive" />}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Esta accion no se puede deshacer. Se eliminara permanentemente el registro.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteModal(false)
+                setDeleteTarget(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Content Views */}
@@ -552,17 +761,11 @@ export default function FinanzasPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[120px]">
-                            <div className="flex items-center gap-1">
-                              Fecha
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
+                          <TableHead className="w-[120px]">Fecha</TableHead>
                           <TableHead>Categoria</TableHead>
-                          <TableHead className="hidden md:table-cell">
-                            Descripcion
-                          </TableHead>
+                          <TableHead className="hidden md:table-cell">Descripcion</TableHead>
                           <TableHead className="text-right">Monto</TableHead>
+                          <TableHead className="w-[100px] text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -572,12 +775,7 @@ export default function FinanzasPage() {
                               {new Date(expense.date).toLocaleDateString('es-NI')}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                className={
-                                  categoryColors[expense.category] ||
-                                  categoryColors.otros
-                                }
-                              >
+                              <Badge className={categoryColors[expense.category] || categoryColors.otros}>
                                 {getCategoryLabel(expense.category)}
                               </Badge>
                             </TableCell>
@@ -586,6 +784,29 @@ export default function FinanzasPage() {
                             </TableCell>
                             <TableCell className="text-right font-medium text-destructive">
                               C$ {expense.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openEditExpense(expense)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setDeleteTarget({ type: 'expense', id: expense.id, name: getCategoryLabel(expense.category) })
+                                    setShowDeleteModal(true)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -616,17 +837,11 @@ export default function FinanzasPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[120px]">
-                            <div className="flex items-center gap-1">
-                              Fecha
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
+                          <TableHead className="w-[120px]">Fecha</TableHead>
                           <TableHead>Fuente</TableHead>
-                          <TableHead className="hidden md:table-cell">
-                            Descripcion
-                          </TableHead>
+                          <TableHead className="hidden md:table-cell">Descripcion</TableHead>
                           <TableHead className="text-right">Monto</TableHead>
+                          <TableHead className="w-[100px] text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -636,11 +851,7 @@ export default function FinanzasPage() {
                               {new Date(income.date).toLocaleDateString('es-NI')}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                className={
-                                  sourceColors[income.source] || sourceColors.otros
-                                }
-                              >
+                              <Badge className={sourceColors[income.source] || sourceColors.otros}>
                                 {getSourceLabel(income.source)}
                               </Badge>
                             </TableCell>
@@ -649,6 +860,29 @@ export default function FinanzasPage() {
                             </TableCell>
                             <TableCell className="text-right font-medium text-primary">
                               C$ {income.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openEditIncome(income)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setDeleteTarget({ type: 'income', id: income.id, name: getSourceLabel(income.source) })
+                                    setShowDeleteModal(true)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}

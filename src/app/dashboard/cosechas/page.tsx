@@ -8,10 +8,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Modal } from '@/components/ui/modal'
 import { CalendarView } from '@/components/ui/calendar-view'
-import { Leaf, Plus, Package, DollarSign, TrendingUp, List, CalendarDays } from 'lucide-react'
+import { Leaf, Plus, Package, DollarSign, TrendingUp, List, CalendarDays, Pencil, Trash2 } from 'lucide-react'
 
 interface Harvest {
   id: string
@@ -51,6 +51,9 @@ export default function CosechasPage() {
   const [harvests, setHarvests] = useState<Harvest[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
+  const [editingHarvest, setEditingHarvest] = useState<Harvest | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeView, setActiveView] = useState('lista')
   const [formData, setFormData] = useState({
@@ -89,6 +92,7 @@ export default function CosechasPage() {
       fechaCosecha: new Date().toISOString().split('T')[0],
       precioUnitario: ''
     })
+    setEditingHarvest(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,10 +100,16 @@ export default function CosechasPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/harvests', {
-        method: 'POST',
+      const url = '/api/harvests'
+      const method = editingHarvest ? 'PUT' : 'POST'
+      const body = editingHarvest 
+        ? { id: editingHarvest.id, ...formData }
+        : formData
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
@@ -115,6 +125,44 @@ export default function CosechasPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/harvests', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteTarget.id })
+      })
+
+      if (response.ok) {
+        setShowDeleteModal(false)
+        setDeleteTarget(null)
+        fetchHarvests()
+      } else {
+        alert('Error al eliminar cosecha')
+      }
+    } catch (error) {
+      alert('Error al eliminar cosecha')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const openEditHarvest = (harvest: Harvest) => {
+    setEditingHarvest(harvest)
+    setFormData({
+      parcela: harvest.parcela,
+      cantidad: harvest.cantidad.toString(),
+      calidad: harvest.calidad || '',
+      variedad: harvest.variedad || '',
+      fechaCosecha: harvest.fechaCosecha.split('T')[0],
+      precioUnitario: harvest.precioUnitario.toString()
+    })
+    setShowModal(true)
   }
 
   const handleCloseModal = () => {
@@ -240,7 +288,7 @@ export default function CosechasPage() {
           </TabsList>
         </Tabs>
 
-        <Button onClick={() => setShowModal(true)} className="gap-2">
+        <Button onClick={() => { resetForm(); setShowModal(true) }} className="gap-2">
           <Plus className="h-4 w-4" />
           Nueva Cosecha
         </Button>
@@ -250,8 +298,8 @@ export default function CosechasPage() {
       <Modal
         isOpen={showModal}
         onClose={handleCloseModal}
-        title="Registrar Cosecha"
-        description="Agrega una nueva cosecha a tu registro"
+        title={editingHarvest ? 'Editar Cosecha' : 'Registrar Cosecha'}
+        description={editingHarvest ? 'Modifica los datos de la cosecha' : 'Agrega una nueva cosecha a tu registro'}
         icon={<Leaf className="h-5 w-5" />}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -368,9 +416,47 @@ export default function CosechasPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Registrando...' : 'Registrar Cosecha'}
+            {isSubmitting ? 'Guardando...' : editingHarvest ? 'Guardar Cambios' : 'Registrar Cosecha'}
           </Button>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDeleteTarget(null)
+        }}
+        title="Confirmar Eliminacion"
+        description="¿Estas seguro de eliminar esta cosecha?"
+        icon={<Trash2 className="h-5 w-5 text-destructive" />}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Esta accion no se puede deshacer. Se eliminara permanentemente el registro de la cosecha.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteModal(false)
+                setDeleteTarget(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Content Views */}
@@ -399,6 +485,7 @@ export default function CosechasPage() {
                       <TableHead className="text-right">Cantidad</TableHead>
                       <TableHead className="text-right">Precio/ud</TableHead>
                       <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="w-[100px] text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -434,6 +521,29 @@ export default function CosechasPage() {
                         </TableCell>
                         <TableCell className="text-right font-medium text-primary">
                           C$ {(harvest.cantidad * harvest.precioUnitario).toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditHarvest(harvest)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setDeleteTarget({ id: harvest.id, name: harvest.parcela })
+                                setShowDeleteModal(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
