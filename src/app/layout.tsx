@@ -31,6 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased `}
     >
       <body className="min-h-full flex flex-col">

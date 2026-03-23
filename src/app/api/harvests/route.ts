@@ -11,11 +11,11 @@ export async function GET(req: NextRequest) {
     }
 
     const supabaseService = new SupabaseService()
-    const expenses = await supabaseService.getExpenses(user.id)
+    const harvests = await supabaseService.getHarvests(user.id)
 
-    return NextResponse.json(expenses)
+    return NextResponse.json(harvests)
   } catch (error) {
-    console.error('Error al obtener gastos:', error)
+    console.error('Error al obtener cosechas:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -29,25 +29,27 @@ export async function POST(req: NextRequest) {
     }
 
     const supabaseService = new SupabaseService()
-    const { category, description, amount, date } = await req.json()
+    const { parcela, cantidad, calidad, variedad, fechaCosecha, precioUnitario } = await req.json()
 
-    if (!category || !amount || !date) {
+    if (!parcela || !cantidad || !fechaCosecha || !precioUnitario) {
       return NextResponse.json(
-        { error: 'Categoría, monto y fecha son requeridos' },
+        { error: 'Parcela, cantidad, fecha y precio son requeridos' },
         { status: 400 }
       )
     }
 
-    const expense = await supabaseService.createExpense(user.id, {
-      category,
-      description,
-      amount: parseFloat(amount),
-      date
+    const harvest = await supabaseService.createHarvest(user.id, {
+      parcela,
+      cantidad: parseFloat(cantidad),
+      calidad,
+      variedad,
+      fechaCosecha,
+      precioUnitario: parseFloat(precioUnitario)
     })
 
-    return NextResponse.json(expense)
+    return NextResponse.json(harvest)
   } catch (error) {
-    console.error('Error al crear gasto:', error)
+    console.error('Error al crear cosecha:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -61,22 +63,24 @@ export async function PUT(req: NextRequest) {
     }
 
     const supabaseService = new SupabaseService()
-    const { id, category, description, amount, date } = await req.json()
+    const { id, parcela, cantidad, calidad, variedad, fechaCosecha, precioUnitario } = await req.json()
 
     if (!id) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
     }
 
-    const expense = await supabaseService.updateExpense(user.id, id, {
-      category,
-      description,
-      amount: amount ? parseFloat(amount) : undefined,
-      date
+    const harvest = await supabaseService.updateHarvest(user.id, id, {
+      parcela,
+      cantidad: cantidad ? parseFloat(cantidad) : undefined,
+      calidad,
+      variedad,
+      fechaCosecha,
+      precioUnitario: precioUnitario ? parseFloat(precioUnitario) : undefined
     })
 
-    return NextResponse.json(expense)
+    return NextResponse.json(harvest)
   } catch (error) {
-    console.error('Error al actualizar gasto:', error)
+    console.error('Error al actualizar cosecha:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -96,11 +100,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
     }
 
-    await supabaseService.deleteExpense(user.id, id)
+    await supabaseService.deleteHarvest(user.id, id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error al eliminar gasto:', error)
+    console.error('Error al eliminar cosecha:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
