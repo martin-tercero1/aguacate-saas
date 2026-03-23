@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { ClipboardList, Plus, Clock, CheckCircle2, Circle, Loader2 } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Modal } from '@/components/ui/modal'
+import { CalendarView } from '@/components/ui/calendar-view'
+import { ClipboardList, Plus, Clock, CheckCircle2, Circle, Loader2, List, CalendarDays } from 'lucide-react'
 
 interface Activity {
   id: string
@@ -18,17 +21,17 @@ interface Activity {
   estado: string
 }
 
-const tipoLabels: Record<string, string> = {
-  siembra: 'Siembra',
-  abono: 'Abono',
-  fumigacion: 'Fumigacion',
-  poda: 'Poda',
-  riego: 'Riego',
-  limpieza: 'Limpieza',
-  cosecha: 'Cosecha',
-  mantenimiento: 'Mantenimiento',
-  otros: 'Otros'
-}
+const tipoOptions = [
+  { value: 'siembra', label: 'Siembra' },
+  { value: 'abono', label: 'Abono' },
+  { value: 'fumigacion', label: 'Fumigacion' },
+  { value: 'poda', label: 'Poda' },
+  { value: 'riego', label: 'Riego' },
+  { value: 'limpieza', label: 'Limpieza' },
+  { value: 'cosecha', label: 'Cosecha' },
+  { value: 'mantenimiento', label: 'Mantenimiento' },
+  { value: 'otros', label: 'Otros' }
+]
 
 const tipoColors: Record<string, string> = {
   siembra: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -42,30 +45,19 @@ const tipoColors: Record<string, string> = {
   otros: 'bg-muted text-muted-foreground'
 }
 
-const estadoConfig: Record<string, { label: string; icon: typeof Circle; color: string }> = {
-  pendiente: {
-    label: 'Pendiente',
-    icon: Circle,
-    color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200'
-  },
-  en_proceso: {
-    label: 'En Proceso',
-    icon: Loader2,
-    color: 'text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-200'
-  },
-  completado: {
-    label: 'Completado',
-    icon: CheckCircle2,
-    color: 'text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-200'
-  }
-}
+const estadoOptions = [
+  { value: 'pendiente', label: 'Pendiente', icon: Circle, color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200' },
+  { value: 'en_proceso', label: 'En Proceso', icon: Loader2, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-200' },
+  { value: 'completado', label: 'Completado', icon: CheckCircle2, color: 'text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-200' }
+]
 
 export default function ActividadesPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filter, setFilter] = useState<string>('todos')
+  const [activeView, setActiveView] = useState('lista')
   const [formData, setFormData] = useState({
     tipo: '',
     parcela: '',
@@ -92,6 +84,16 @@ export default function ActividadesPage() {
     fetchActivities()
   }, [])
 
+  const resetForm = () => {
+    setFormData({
+      tipo: '',
+      parcela: '',
+      descripcion: '',
+      fecha: new Date().toISOString().split('T')[0],
+      estado: 'pendiente'
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -104,14 +106,8 @@ export default function ActividadesPage() {
       })
 
       if (response.ok) {
-        setFormData({
-          tipo: '',
-          parcela: '',
-          descripcion: '',
-          fecha: new Date().toISOString().split('T')[0],
-          estado: 'pendiente'
-        })
-        setShowForm(false)
+        resetForm()
+        setShowModal(false)
         fetchActivities()
       } else {
         const error = await response.json()
@@ -140,6 +136,20 @@ export default function ActividadesPage() {
     }
   }
 
+  const handleCloseModal = () => {
+    setShowModal(false)
+    resetForm()
+  }
+
+  // Helper function to get labels
+  const getTipoLabel = (value: string) => {
+    return tipoOptions.find(opt => opt.value === value)?.label || value
+  }
+
+  const getEstadoConfig = (value: string) => {
+    return estadoOptions.find(opt => opt.value === value) || estadoOptions[0]
+  }
+
   // Filter activities
   const filteredActivities = activities.filter((activity) => {
     if (filter === 'todos') return true
@@ -150,6 +160,15 @@ export default function ActividadesPage() {
   const pendingCount = activities.filter((a) => a.estado === 'pendiente').length
   const inProgressCount = activities.filter((a) => a.estado === 'en_proceso').length
   const completedCount = activities.filter((a) => a.estado === 'completado').length
+
+  // Convert to calendar events
+  const calendarEvents = filteredActivities.map((activity) => ({
+    id: activity.id,
+    date: activity.fecha,
+    title: getTipoLabel(activity.tipo),
+    subtitle: activity.parcela,
+    color: tipoColors[activity.tipo] || tipoColors.otros
+  }))
 
   if (loading) {
     return (
@@ -225,219 +244,229 @@ export default function ActividadesPage() {
         </Card>
       </div>
 
-      {/* Actions & Filter */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
-          <Button
-            variant={filter === 'todos' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('todos')}
-          >
-            Todos
-          </Button>
-          <Button
-            variant={filter === 'pendiente' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('pendiente')}
-          >
-            Pendientes
-          </Button>
-          <Button
-            variant={filter === 'en_proceso' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('en_proceso')}
-          >
-            En Proceso
-          </Button>
-          <Button
-            variant={filter === 'completado' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter('completado')}
-          >
-            Completadas
-          </Button>
-        </div>
+      {/* Actions, Filter & View Toggle */}
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={filter === 'todos' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('todos')}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={filter === 'pendiente' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('pendiente')}
+            >
+              Pendientes
+            </Button>
+            <Button
+              variant={filter === 'en_proceso' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('en_proceso')}
+            >
+              En Proceso
+            </Button>
+            <Button
+              variant={filter === 'completado' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('completado')}
+            >
+              Completadas
+            </Button>
+          </div>
 
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          variant={showForm ? 'secondary' : 'default'}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          {showForm ? 'Cancelar' : 'Nueva Actividad'}
-        </Button>
-      </div>
+          <div className="flex items-center gap-2">
+            <Tabs value={activeView} onValueChange={setActiveView}>
+              <TabsList>
+                <TabsTrigger value="lista" className="gap-2">
+                  <List className="h-4 w-4" />
+                  Lista
+                </TabsTrigger>
+                <TabsTrigger value="calendario" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Calendario
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-      {/* Form */}
-      {showForm && (
-        <Card className="mx-auto mb-8 max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
+            <Button onClick={() => setShowModal(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
               Nueva Actividad
-            </CardTitle>
-            <CardDescription>
-              Planifica una nueva tarea para tu finca
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Actividad</Label>
-                <Select
-                  value={formData.tipo}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, tipo: value || '' }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="siembra">Siembra</SelectItem>
-                    <SelectItem value="abono">Abono</SelectItem>
-                    <SelectItem value="fumigacion">Fumigacion</SelectItem>
-                    <SelectItem value="poda">Poda</SelectItem>
-                    <SelectItem value="riego">Riego</SelectItem>
-                    <SelectItem value="limpieza">Limpieza</SelectItem>
-                    <SelectItem value="cosecha">Cosecha</SelectItem>
-                    <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-                    <SelectItem value="otros">Otros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="parcela">Parcela</Label>
-                <Input
-                  id="parcela"
-                  value={formData.parcela}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, parcela: e.target.value }))
-                  }
-                  placeholder="Ej: Parcela Norte"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripcion (opcional)</Label>
-                <Input
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      descripcion: e.target.value
-                    }))
-                  }
-                  placeholder="Detalles adicionales"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fecha">Fecha Programada</Label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={formData.fecha}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, fecha: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Registrando...' : 'Crear Actividad'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Activities List */}
-      <div className="space-y-4">
-        {filteredActivities.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              {filter === 'todos'
-                ? 'No hay actividades registradas. Comienza creando tu primera actividad.'
-                : `No hay actividades con estado "${estadoConfig[filter]?.label || filter}".`}
-            </CardContent>
-          </Card>
-        ) : (
-          filteredActivities.map((activity) => {
-            const statusConfig = estadoConfig[activity.estado] || estadoConfig.pendiente
-            const StatusIcon = statusConfig.icon
-
-            return (
-              <Card key={activity.id} className="transition-shadow hover:shadow-md">
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          className={
-                            tipoColors[activity.tipo] || tipoColors.otros
-                          }
-                        >
-                          {tipoLabels[activity.tipo] || activity.tipo}
-                        </Badge>
-                        <Badge variant="outline">{activity.parcela}</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(activity.fecha).toLocaleDateString('es-NI')}
-                        </span>
-                      </div>
-                      {activity.descripcion && (
-                        <p className="text-sm text-muted-foreground">
-                          {activity.descripcion}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={activity.estado}
-                        onValueChange={(value) => {
-                          if (value) handleStatusChange(activity.id, value)
-                        }}
-                      >
-                        <SelectTrigger className={`w-[140px] ${statusConfig.color}`}>
-                          <div className="flex items-center gap-2">
-                            <StatusIcon className="h-4 w-4" />
-                            <SelectValue />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pendiente">
-                            <div className="flex items-center gap-2">
-                              <Circle className="h-4 w-4" />
-                              Pendiente
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="en_proceso">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4" />
-                              En Proceso
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="completado">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4" />
-                              Completado
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* Modal Form */}
+      <Modal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        title="Nueva Actividad"
+        description="Planifica una nueva tarea para tu finca"
+        icon={<ClipboardList className="h-5 w-5" />}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="tipo">Tipo de Actividad</Label>
+            <Select
+              value={formData.tipo}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, tipo: value || '' }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona tipo">
+                  {formData.tipo && getTipoLabel(formData.tipo)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {tipoOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="parcela">Parcela</Label>
+            <Input
+              id="parcela"
+              value={formData.parcela}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, parcela: e.target.value }))
+              }
+              placeholder="Ej: Parcela Norte"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="descripcion">Descripcion (opcional)</Label>
+            <Input
+              id="descripcion"
+              value={formData.descripcion}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  descripcion: e.target.value
+                }))
+              }
+              placeholder="Detalles adicionales"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fecha">Fecha Programada</Label>
+            <Input
+              id="fecha"
+              type="date"
+              value={formData.fecha}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, fecha: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Registrando...' : 'Crear Actividad'}
+          </Button>
+        </form>
+      </Modal>
+
+      {/* Content Views */}
+      {activeView === 'lista' ? (
+        <div className="space-y-4">
+          {filteredActivities.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                {filter === 'todos'
+                  ? 'No hay actividades registradas. Comienza creando tu primera actividad.'
+                  : `No hay actividades con estado "${getEstadoConfig(filter).label}".`}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredActivities.map((activity) => {
+              const statusConfig = getEstadoConfig(activity.estado)
+              const StatusIcon = statusConfig.icon
+
+              return (
+                <Card key={activity.id} className="transition-shadow hover:shadow-md">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            className={
+                              tipoColors[activity.tipo] || tipoColors.otros
+                            }
+                          >
+                            {getTipoLabel(activity.tipo)}
+                          </Badge>
+                          <Badge variant="outline">{activity.parcela}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(activity.fecha).toLocaleDateString('es-NI')}
+                          </span>
+                        </div>
+                        {activity.descripcion && (
+                          <p className="text-sm text-muted-foreground">
+                            {activity.descripcion}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={activity.estado}
+                          onValueChange={(value) => {
+                            if (value) handleStatusChange(activity.id, value)
+                          }}
+                        >
+                          <SelectTrigger className={`w-[140px] ${statusConfig.color}`}>
+                            <div className="flex items-center gap-2">
+                              <StatusIcon className="h-4 w-4" />
+                              <span>{statusConfig.label}</span>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {estadoOptions.map((opt) => {
+                              const Icon = opt.icon
+                              return (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    {opt.label}
+                                  </div>
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
+      ) : (
+        <CalendarView 
+          events={calendarEvents}
+          onDateClick={(date) => {
+            setFormData(prev => ({
+              ...prev,
+              fecha: date.toISOString().split('T')[0]
+            }))
+            setShowModal(true)
+          }}
+        />
+      )}
     </div>
   )
 }

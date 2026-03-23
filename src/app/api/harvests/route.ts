@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabaseService = new SupabaseService()
-    const { parcela, cantidad, calidad, fechaCosecha, precioUnitario } = await req.json()
+    const { parcela, cantidad, calidad, variedad, fechaCosecha, precioUnitario } = await req.json()
 
     if (!parcela || !cantidad || !fechaCosecha || !precioUnitario) {
       return NextResponse.json(
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       parcela,
       cantidad: parseFloat(cantidad),
       calidad,
+      variedad,
       fechaCosecha,
       precioUnitario: parseFloat(precioUnitario)
     })

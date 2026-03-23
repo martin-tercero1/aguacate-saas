@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ExpenseForm } from '@/components/expense-form'
-import { IncomeForm } from '@/components/income-form'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpDown } from 'lucide-react'
+import { Modal } from '@/components/ui/modal'
+import { CalendarView } from '@/components/ui/calendar-view'
+import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpDown, List, CalendarDays } from 'lucide-react'
 
 interface Expense {
   id: string
@@ -35,16 +38,25 @@ interface DashboardData {
   currentMonthProfit: number
 }
 
-const categoryLabels: Record<string, string> = {
-  insumos: 'Insumos',
-  mano_de_obra: 'Mano de Obra',
-  mantenimiento: 'Mantenimiento',
-  transporte: 'Transporte',
-  fertilizantes: 'Fertilizantes',
-  pesticidas: 'Pesticidas',
-  agua: 'Agua',
-  otros: 'Otros'
-}
+const categoryOptions = [
+  { value: 'insumos', label: 'Insumos' },
+  { value: 'mano_de_obra', label: 'Mano de Obra' },
+  { value: 'mantenimiento', label: 'Mantenimiento' },
+  { value: 'transporte', label: 'Transporte' },
+  { value: 'fertilizantes', label: 'Fertilizantes' },
+  { value: 'pesticidas', label: 'Pesticidas' },
+  { value: 'agua', label: 'Agua' },
+  { value: 'otros', label: 'Otros' }
+]
+
+const sourceOptions = [
+  { value: 'venta_cosechas', label: 'Venta de Cosechas' },
+  { value: 'venta_aguacates', label: 'Venta de Aguacates' },
+  { value: 'otros_productos', label: 'Otros Productos' },
+  { value: 'servicios', label: 'Servicios' },
+  { value: 'subsidios', label: 'Subsidios' },
+  { value: 'otros', label: 'Otros' }
+]
 
 const categoryColors: Record<string, string> = {
   insumos: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -55,15 +67,6 @@ const categoryColors: Record<string, string> = {
   pesticidas: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   agua: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
   otros: 'bg-muted text-muted-foreground'
-}
-
-const sourceLabels: Record<string, string> = {
-  venta_cosechas: 'Venta de Cosechas',
-  venta_aguacates: 'Venta de Aguacates',
-  otros_productos: 'Otros Productos',
-  servicios: 'Servicios',
-  subsidios: 'Subsidios',
-  otros: 'Otros'
 }
 
 const sourceColors: Record<string, string> = {
@@ -80,9 +83,25 @@ export default function FinanzasPage() {
   const [incomes, setIncomes] = useState<Income[]>([])
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showExpenseForm, setShowExpenseForm] = useState(false)
-  const [showIncomeForm, setShowIncomeForm] = useState(false)
+  const [showExpenseModal, setShowExpenseModal] = useState(false)
+  const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [activeTab, setActiveTab] = useState('gastos')
+  const [activeView, setActiveView] = useState('lista')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [expenseForm, setExpenseForm] = useState({
+    category: '',
+    description: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0]
+  })
+
+  const [incomeForm, setIncomeForm] = useState({
+    source: '',
+    description: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0]
+  })
 
   const fetchData = async () => {
     try {
@@ -115,15 +134,103 @@ export default function FinanzasPage() {
     fetchData()
   }, [])
 
-  const handleExpenseSuccess = () => {
-    setShowExpenseForm(false)
-    fetchData()
+  const resetExpenseForm = () => {
+    setExpenseForm({
+      category: '',
+      description: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0]
+    })
   }
 
-  const handleIncomeSuccess = () => {
-    setShowIncomeForm(false)
-    fetchData()
+  const resetIncomeForm = () => {
+    setIncomeForm({
+      source: '',
+      description: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0]
+    })
   }
+
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseForm)
+      })
+
+      if (response.ok) {
+        resetExpenseForm()
+        setShowExpenseModal(false)
+        fetchData()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Error al registrar gasto')
+      }
+    } catch (error) {
+      alert('Error al registrar gasto')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleIncomeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/incomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(incomeForm)
+      })
+
+      if (response.ok) {
+        resetIncomeForm()
+        setShowIncomeModal(false)
+        fetchData()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Error al registrar ingreso')
+      }
+    } catch (error) {
+      alert('Error al registrar ingreso')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Helper functions to get labels
+  const getCategoryLabel = (value: string) => {
+    return categoryOptions.find(opt => opt.value === value)?.label || value
+  }
+
+  const getSourceLabel = (value: string) => {
+    return sourceOptions.find(opt => opt.value === value)?.label || value
+  }
+
+  // Convert to calendar events
+  const expenseEvents = expenses.map((expense) => ({
+    id: expense.id,
+    date: expense.date,
+    title: `- C$ ${expense.amount.toFixed(0)}`,
+    subtitle: getCategoryLabel(expense.category),
+    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+  }))
+
+  const incomeEvents = incomes.map((income) => ({
+    id: income.id,
+    date: income.date,
+    title: `+ C$ ${income.amount.toFixed(0)}`,
+    subtitle: getSourceLabel(income.source),
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+  }))
+
+  const allEvents = activeTab === 'gastos' ? expenseEvents : incomeEvents
 
   if (loading) {
     return (
@@ -157,10 +264,10 @@ export default function FinanzasPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                C$ {dashboardData.totalExpenses.toFixed(2)}
+                C$ {dashboardData.totalExpenses.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthExpenses.toFixed(2)}
+                Este mes: C$ {dashboardData.currentMonthExpenses.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
@@ -174,10 +281,10 @@ export default function FinanzasPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
-                C$ {dashboardData.totalIncomes.toFixed(2)}
+                C$ {dashboardData.totalIncomes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthIncomes.toFixed(2)}
+                Este mes: C$ {dashboardData.currentMonthIncomes.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
@@ -197,199 +304,377 @@ export default function FinanzasPage() {
                     : 'text-destructive'
                 }`}
               >
-                C$ {dashboardData.totalProfit.toFixed(2)}
+                C$ {dashboardData.totalProfit.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Este mes: C$ {dashboardData.currentMonthProfit.toFixed(2)}
+                Este mes: C$ {dashboardData.currentMonthProfit.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      {/* Tabs and Actions */}
+      <div className="mb-6 flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList>
-            <TabsTrigger value="gastos" className="gap-2">
-              <TrendingDown className="h-4 w-4" />
-              Gastos
-            </TabsTrigger>
-            <TabsTrigger value="ingresos" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Ingresos
-            </TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="gastos" className="gap-2">
+                <TrendingDown className="h-4 w-4" />
+                Gastos
+              </TabsTrigger>
+              <TabsTrigger value="ingresos" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Ingresos
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {activeTab === 'gastos' ? (
-            <Button
-              onClick={() => {
-                setShowExpenseForm(!showExpenseForm)
-                setShowIncomeForm(false)
-              }}
-              variant={showExpenseForm ? 'secondary' : 'destructive'}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {showExpenseForm ? 'Cancelar' : 'Nuevo Gasto'}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => {
-                setShowIncomeForm(!showIncomeForm)
-                setShowExpenseForm(false)
-              }}
-              variant={showIncomeForm ? 'secondary' : 'default'}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {showIncomeForm ? 'Cancelar' : 'Nuevo Ingreso'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Tabs value={activeView} onValueChange={setActiveView}>
+              <TabsList>
+                <TabsTrigger value="lista" className="gap-2">
+                  <List className="h-4 w-4" />
+                  Lista
+                </TabsTrigger>
+                <TabsTrigger value="calendario" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Calendario
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {activeTab === 'gastos' ? (
+              <Button
+                onClick={() => setShowExpenseModal(true)}
+                variant="destructive"
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Nuevo Gasto
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setShowIncomeModal(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Nuevo Ingreso
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Forms */}
-        {showExpenseForm && (
-          <div className="flex justify-center">
-            <ExpenseForm onSuccess={handleExpenseSuccess} />
+      {/* Expense Modal */}
+      <Modal
+        isOpen={showExpenseModal}
+        onClose={() => {
+          setShowExpenseModal(false)
+          resetExpenseForm()
+        }}
+        title="Registrar Gasto"
+        description="Agrega un nuevo gasto a tu finca"
+        icon={<TrendingDown className="h-5 w-5" />}
+      >
+        <form onSubmit={handleExpenseSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoria</Label>
+            <Select
+              value={expenseForm.category}
+              onValueChange={(value) =>
+                setExpenseForm((prev) => ({ ...prev, category: value || '' }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una categoria">
+                  {expenseForm.category && getCategoryLabel(expenseForm.category)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
 
-        {showIncomeForm && (
-          <div className="flex justify-center">
-            <IncomeForm onSuccess={handleIncomeSuccess} />
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripcion (opcional)</Label>
+            <Input
+              id="description"
+              value={expenseForm.description}
+              onChange={(e) =>
+                setExpenseForm((prev) => ({ ...prev, description: e.target.value }))
+              }
+              placeholder="Ej: Compra de fertilizantes"
+            />
           </div>
-        )}
 
-        {/* Gastos Tab */}
-        <TabsContent value="gastos">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-destructive" />
-                Todos los Gastos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {expenses.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  No hay gastos registrados. Comienza agregando tu primer gasto.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[120px]">
-                          <div className="flex items-center gap-1">
-                            Fecha
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Descripcion
-                        </TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell className="font-medium">
-                            {new Date(expense.date).toLocaleDateString('es-NI')}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                categoryColors[expense.category] ||
-                                categoryColors.otros
-                              }
-                            >
-                              {categoryLabels[expense.category] ||
-                                expense.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden max-w-[200px] truncate md:table-cell">
-                            {expense.description || '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-destructive">
-                            C$ {expense.amount.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Monto (C$)</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={expenseForm.amount}
+              onChange={(e) =>
+                setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))
+              }
+              placeholder="0.00"
+              required
+            />
+          </div>
 
-        {/* Ingresos Tab */}
-        <TabsContent value="ingresos">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Todos los Ingresos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {incomes.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  No hay ingresos registrados. Comienza agregando tu primer
-                  ingreso.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[120px]">
-                          <div className="flex items-center gap-1">
-                            Fecha
-                            <ArrowUpDown className="h-3 w-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead>Fuente</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Descripcion
-                        </TableHead>
-                        <TableHead className="text-right">Monto</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {incomes.map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell className="font-medium">
-                            {new Date(income.date).toLocaleDateString('es-NI')}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                sourceColors[income.source] || sourceColors.otros
-                              }
-                            >
-                              {sourceLabels[income.source] || income.source}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden max-w-[200px] truncate md:table-cell">
-                            {income.description || '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-primary">
-                            C$ {income.amount.toFixed(2)}
-                          </TableCell>
+          <div className="space-y-2">
+            <Label htmlFor="date">Fecha</Label>
+            <Input
+              id="date"
+              type="date"
+              value={expenseForm.date}
+              onChange={(e) =>
+                setExpenseForm((prev) => ({ ...prev, date: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <Button type="submit" variant="destructive" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Registrando...' : 'Registrar Gasto'}
+          </Button>
+        </form>
+      </Modal>
+
+      {/* Income Modal */}
+      <Modal
+        isOpen={showIncomeModal}
+        onClose={() => {
+          setShowIncomeModal(false)
+          resetIncomeForm()
+        }}
+        title="Registrar Ingreso"
+        description="Agrega un nuevo ingreso a tu finca"
+        icon={<TrendingUp className="h-5 w-5" />}
+      >
+        <form onSubmit={handleIncomeSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="source">Fuente</Label>
+            <Select
+              value={incomeForm.source}
+              onValueChange={(value) =>
+                setIncomeForm((prev) => ({ ...prev, source: value || '' }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una fuente">
+                  {incomeForm.source && getSourceLabel(incomeForm.source)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {sourceOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripcion (opcional)</Label>
+            <Input
+              id="description"
+              value={incomeForm.description}
+              onChange={(e) =>
+                setIncomeForm((prev) => ({ ...prev, description: e.target.value }))
+              }
+              placeholder="Ej: Venta de cosecha de aguacates"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">Monto (C$)</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={incomeForm.amount}
+              onChange={(e) =>
+                setIncomeForm((prev) => ({ ...prev, amount: e.target.value }))
+              }
+              placeholder="0.00"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Fecha</Label>
+            <Input
+              id="date"
+              type="date"
+              value={incomeForm.date}
+              onChange={(e) =>
+                setIncomeForm((prev) => ({ ...prev, date: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Registrando...' : 'Registrar Ingreso'}
+          </Button>
+        </form>
+      </Modal>
+
+      {/* Content Views */}
+      {activeView === 'lista' ? (
+        <>
+          {/* Gastos Tab Content */}
+          {activeTab === 'gastos' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-destructive" />
+                  Todos los Gastos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {expenses.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground">
+                    No hay gastos registrados. Comienza agregando tu primer gasto.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">
+                            <div className="flex items-center gap-1">
+                              Fecha
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Descripcion
+                          </TableHead>
+                          <TableHead className="text-right">Monto</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                      </TableHeader>
+                      <TableBody>
+                        {expenses.map((expense) => (
+                          <TableRow key={expense.id}>
+                            <TableCell className="font-medium">
+                              {new Date(expense.date).toLocaleDateString('es-NI')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  categoryColors[expense.category] ||
+                                  categoryColors.otros
+                                }
+                              >
+                                {getCategoryLabel(expense.category)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden max-w-[200px] truncate md:table-cell">
+                              {expense.description || '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-destructive">
+                              C$ {expense.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ingresos Tab Content */}
+          {activeTab === 'ingresos' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Todos los Ingresos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {incomes.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground">
+                    No hay ingresos registrados. Comienza agregando tu primer ingreso.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">
+                            <div className="flex items-center gap-1">
+                              Fecha
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead>Fuente</TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Descripcion
+                          </TableHead>
+                          <TableHead className="text-right">Monto</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {incomes.map((income) => (
+                          <TableRow key={income.id}>
+                            <TableCell className="font-medium">
+                              {new Date(income.date).toLocaleDateString('es-NI')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  sourceColors[income.source] || sourceColors.otros
+                                }
+                              >
+                                {getSourceLabel(income.source)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden max-w-[200px] truncate md:table-cell">
+                              {income.description || '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-primary">
+                              C$ {income.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <CalendarView 
+          events={allEvents}
+          onDateClick={(date) => {
+            const dateStr = date.toISOString().split('T')[0]
+            if (activeTab === 'gastos') {
+              setExpenseForm(prev => ({ ...prev, date: dateStr }))
+              setShowExpenseModal(true)
+            } else {
+              setIncomeForm(prev => ({ ...prev, date: dateStr }))
+              setShowIncomeModal(true)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

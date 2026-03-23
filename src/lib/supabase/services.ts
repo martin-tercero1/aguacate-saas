@@ -245,6 +245,7 @@ export class SupabaseService {
     parcela: string
     cantidad: number
     calidad?: string
+    variedad?: string
     fechaCosecha: string
     precioUnitario: number
   }) {
@@ -257,6 +258,7 @@ export class SupabaseService {
           parcela: harvest.parcela,
           cantidad: harvest.cantidad,
           calidad: harvest.calidad,
+          variedad: harvest.variedad,
           fechaCosecha: harvest.fechaCosecha,
           precioUnitario: harvest.precioUnitario
         }])
