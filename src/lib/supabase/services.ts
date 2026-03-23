@@ -222,4 +222,119 @@ export class SupabaseService {
       throw error
     }
   }
+
+  // Harvests CRUD
+  async getHarvests(userId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('harvests')
+        .select('*')
+        .eq('userId', userId)
+        .order('fechaCosecha', { ascending: false })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error getting harvests:', error)
+      throw error
+    }
+  }
+
+  async createHarvest(userId: string, harvest: {
+    parcela: string
+    cantidad: number
+    calidad?: string
+    fechaCosecha: string
+    precioUnitario: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('harvests')
+        .insert([{
+          userId: userId,
+          parcela: harvest.parcela,
+          cantidad: harvest.cantidad,
+          calidad: harvest.calidad,
+          fechaCosecha: harvest.fechaCosecha,
+          precioUnitario: harvest.precioUnitario
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating harvest:', error)
+      throw error
+    }
+  }
+
+  // Activities CRUD
+  async getActivities(userId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('userId', userId)
+        .order('fecha', { ascending: false })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error getting activities:', error)
+      throw error
+    }
+  }
+
+  async createActivity(userId: string, activity: {
+    tipo: string
+    parcela: string
+    descripcion?: string
+    fecha: string
+    estado?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('activities')
+        .insert([{
+          userId: userId,
+          tipo: activity.tipo,
+          parcela: activity.parcela,
+          descripcion: activity.descripcion,
+          fecha: activity.fecha,
+          estado: activity.estado || 'pendiente'
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating activity:', error)
+      throw error
+    }
+  }
+
+  async updateActivityStatus(userId: string, activityId: string, estado: string) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('activities')
+        .update({ estado, updatedAt: new Date().toISOString() })
+        .eq('id', activityId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating activity status:', error)
+      throw error
+    }
+  }
 }

@@ -1,14 +1,15 @@
 'use client'
 
 import { useAuth } from '@/contexts/auth-context'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ExpenseForm } from '@/components/expense-form'
 import { IncomeForm } from '@/components/income-form'
 import { ExpenseList } from '@/components/expense-list'
 import { IncomeList } from '@/components/income-list'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DollarSign, TrendingUp, Target, Plus } from 'lucide-react'
+import Link from 'next/link'
 
 interface DashboardData {
   totalExpenses: number
@@ -20,23 +21,11 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
-  const { user, loading, signOut } = useAuth()
-  const router = useRouter()
+  const { user } = useAuth()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [showIncomeForm, setShowIncomeForm] = useState(false)
-
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/auth/signin')
-  }
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/signin')
-    }
-  }, [user, loading, router])
 
   useEffect(() => {
     if (user) {
@@ -68,157 +57,176 @@ export default function Dashboard() {
     fetchDashboardData()
   }
 
-  if (loading || dataLoading) {
+  if (dataLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Cargando...</div>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-lg text-muted-foreground">Cargando datos...</div>
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-foreground">🥑 Aguacate SaaS</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">Hola, {user.user_metadata?.name || user.email}</span>
-              <ThemeToggle />
-              <Button 
-                variant="outline" 
-                onClick={handleSignOut}
-                className="text-sm"
-              >
-                Cerrar Sesión
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+          Panel Principal
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Bienvenido, {user?.user_metadata?.name || 'Usuario'}. Aqui esta el
+          resumen de tu finca.
+        </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground mt-2">Resumen de tus finanzas</p>
-        </div>
-
-        {dashboardData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Gastos Totales</h3>
-                <div className="text-2xl">💰</div>
-              </div>
-              <div className="text-3xl font-bold text-destructive">
+      {/* Stats Cards */}
+      {dashboardData && (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Gastos Totales
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">
                 C$ {dashboardData.totalExpenses.toFixed(2)}
               </div>
-              <div className="text-sm text-muted-foreground mt-2">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Este mes: C$ {dashboardData.currentMonthExpenses.toFixed(2)}
-              </div>
-            </div>
+              </p>
+            </CardContent>
+          </Card>
 
-            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Ingresos Totales</h3>
-                <div className="text-2xl">📈</div>
-              </div>
-              <div className="text-3xl font-bold text-primary">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ingresos Totales
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">
                 C$ {dashboardData.totalIncomes.toFixed(2)}
               </div>
-              <div className="text-sm text-muted-foreground mt-2">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Este mes: C$ {dashboardData.currentMonthIncomes.toFixed(2)}
-              </div>
-            </div>
+              </p>
+            </CardContent>
+          </Card>
 
-            <div className="bg-card p-6 rounded-lg shadow-md border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Ganancia Neta</h3>
-                <div className="text-2xl">🎯</div>
-              </div>
-              <div className={`text-3xl font-bold ${dashboardData.totalProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
+          <Card className="sm:col-span-2 lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ganancia Neta
+              </CardTitle>
+              <Target className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`text-2xl font-bold ${
+                  dashboardData.totalProfit >= 0
+                    ? 'text-primary'
+                    : 'text-destructive'
+                }`}
+              >
                 C$ {dashboardData.totalProfit.toFixed(2)}
               </div>
-              <div className="text-sm text-muted-foreground mt-2">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Este mes: C$ {dashboardData.currentMonthProfit.toFixed(2)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-card p-6 rounded-lg shadow-md border border-border">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Acciones Rápidas</h3>
-            </div>
-            <div className="space-y-3">
-              <Button 
-                className="w-full bg-destructive hover:bg-destructive/90"
-                onClick={() => setShowExpenseForm(!showExpenseForm)}
-              >
-                {showExpenseForm ? 'Cancelar' : '+ Registrar Gasto'}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowIncomeForm(!showIncomeForm)}
-              >
-                {showIncomeForm ? 'Cancelar' : '+ Registrar Ingreso'}
-              </Button>
-              <Button variant="outline" className="w-full">
-                + Ver Todos los Gastos
-              </Button>
-              <Button variant="outline" className="w-full">
-                + Ver Todos los Ingresos
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-card p-6 rounded-lg shadow-md border border-border">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Resumen Mensual</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-muted rounded">
-                <span className="text-sm font-medium">Gastos</span>
-                <span className="text-sm font-bold text-destructive">
-                  C$ {dashboardData?.currentMonthExpenses.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-muted rounded">
-                <span className="text-sm font-medium">Ingresos</span>
-                <span className="text-sm font-bold text-primary">
-                  C$ {dashboardData?.currentMonthIncomes.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-primary/10 rounded">
-                <span className="text-sm font-medium">Ganancia</span>
-                <span className={`text-sm font-bold ${(dashboardData?.currentMonthProfit ?? 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  C$ {dashboardData?.currentMonthProfit.toFixed(2) || '0.00'}
-                </span>
-              </div>
-            </div>
-          </div>
+              </p>
+            </CardContent>
+          </Card>
         </div>
+      )}
 
-        {showExpenseForm && (
-          <div className="mb-8 flex justify-center">
-            <ExpenseForm onSuccess={handleExpenseSuccess} />
-          </div>
-        )}
+      {/* Quick Actions */}
+      <div className="mb-8 grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Acciones Rapidas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              className="w-full justify-start gap-2"
+              variant={showExpenseForm ? 'secondary' : 'destructive'}
+              onClick={() => {
+                setShowExpenseForm(!showExpenseForm)
+                setShowIncomeForm(false)
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {showExpenseForm ? 'Cancelar' : 'Registrar Gasto'}
+            </Button>
+            <Button
+              className="w-full justify-start gap-2"
+              variant={showIncomeForm ? 'secondary' : 'outline'}
+              onClick={() => {
+                setShowIncomeForm(!showIncomeForm)
+                setShowExpenseForm(false)
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {showIncomeForm ? 'Cancelar' : 'Registrar Ingreso'}
+            </Button>
+            <Link href="/dashboard/finanzas" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                Ver todas las finanzas
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-        {showIncomeForm && (
-          <div className="mb-8 flex justify-center">
-            <IncomeForm onSuccess={handleIncomeSuccess} />
-          </div>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Resumen Mensual</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+              <span className="text-sm font-medium">Gastos</span>
+              <span className="text-sm font-bold text-destructive">
+                C$ {dashboardData?.currentMonthExpenses.toFixed(2) || '0.00'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+              <span className="text-sm font-medium">Ingresos</span>
+              <span className="text-sm font-bold text-primary">
+                C$ {dashboardData?.currentMonthIncomes.toFixed(2) || '0.00'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-primary/10 p-3">
+              <span className="text-sm font-medium">Ganancia</span>
+              <span
+                className={`text-sm font-bold ${
+                  (dashboardData?.currentMonthProfit ?? 0) >= 0
+                    ? 'text-primary'
+                    : 'text-destructive'
+                }`}
+              >
+                C$ {dashboardData?.currentMonthProfit.toFixed(2) || '0.00'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ExpenseList />
-          <IncomeList />
+      {/* Forms */}
+      {showExpenseForm && (
+        <div className="mb-8 flex justify-center">
+          <ExpenseForm onSuccess={handleExpenseSuccess} />
         </div>
+      )}
+
+      {showIncomeForm && (
+        <div className="mb-8 flex justify-center">
+          <IncomeForm onSuccess={handleIncomeSuccess} />
+        </div>
+      )}
+
+      {/* Recent Lists */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ExpenseList />
+        <IncomeList />
       </div>
     </div>
   )
