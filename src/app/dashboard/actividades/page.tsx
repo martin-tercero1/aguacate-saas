@@ -399,9 +399,9 @@ export default function ActividadesPage() {
                     <div className="flex items-center gap-2">
                       <Select
                         value={activity.estado}
-                        onValueChange={(value) =>
-                          handleStatusChange(activity.id, value)
-                        }
+                        onValueChange={(value) => {
+                          if (value) handleStatusChange(activity.id, value)
+                        }}
                       >
                         <SelectTrigger className={`w-[140px] ${statusConfig.color}`}>
                           <div className="flex items-center gap-2">
