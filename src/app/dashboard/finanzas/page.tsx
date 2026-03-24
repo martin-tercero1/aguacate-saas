@@ -516,13 +516,15 @@ export default function FinanzasPage() {
                   id: exp.id,
                   date: exp.date,
                   title: exp.category,
-                  subtitle: `C$${exp.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`
+                  subtitle: `C$${exp.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`,
+                  color: 'bg-red-100 text-red-700'
                 }))
               : incomes.map(inc => ({
                   id: inc.id,
                   date: inc.date,
                   title: inc.source,
-                  subtitle: `C$${inc.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`
+                  subtitle: `C$${inc.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`,
+                  color: 'bg-green-100 text-green-700'
                 }))
           }
           onDateClick={(date) => {
