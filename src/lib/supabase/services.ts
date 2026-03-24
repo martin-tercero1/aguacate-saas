@@ -508,7 +508,7 @@ export class SupabaseService {
       const { count } = await supabase
         .from('categories')
         .select('*', { count: 'exact', head: true })
-        .eq('"userId"', userId)
+        .eq('userId', userId)
 
       if (count === 0) {
         await supabase.rpc('seed_default_categories', { user_id: userId })
@@ -517,7 +517,7 @@ export class SupabaseService {
       let query = supabase
         .from('categories')
         .select('*')
-        .eq('"userId"', userId)
+        .eq('userId', userId)
 
       if (type) {
         query = query.eq('type', type)
@@ -543,11 +543,11 @@ export class SupabaseService {
       const { data, error } = await supabase
         .from('categories')
         .insert([{
-          '"userId"': userId,
+          userId: userId,
           name: category.name,
           type: category.type,
           color: category.color || '#3b82f6',
-          '"isDefault"': false
+          isDefault: false
         }])
         .select()
         .single()
@@ -570,7 +570,7 @@ export class SupabaseService {
         .from('categories')
         .update(category)
         .eq('id', categoryId)
-        .eq('"userId"', userId)
+        .eq('userId', userId)
         .select()
         .single()
 
@@ -589,8 +589,8 @@ export class SupabaseService {
         .from('categories')
         .delete()
         .eq('id', categoryId)
-        .eq('"userId"', userId)
-        .eq('"isDefault"', false)
+        .eq('userId', userId)
+        .eq('isDefault', false)
 
       if (error) throw error
       return true
