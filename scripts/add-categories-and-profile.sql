@@ -40,9 +40,24 @@ CREATE POLICY "Users can manage their own profile"
   USING (auth.uid() = id);
 
 -- 3. Seed function: creates default categories for a new user
+-- This function must have proper permissions for service role to call it
 CREATE OR REPLACE FUNCTION seed_default_categories(user_id UUID)
 RETURNS VOID AS $$
+DECLARE
+  new_user_id UUID;
 BEGIN
+  -- Validate user_id
+  IF user_id IS NULL THEN
+    RAISE EXCEPTION 'user_id cannot be null';
+  END IF;
+
+  -- Check if user exists
+  SELECT id INTO new_user_id FROM auth.users WHERE id = user_id LIMIT 1;
+  IF new_user_id IS NULL THEN
+    RAISE EXCEPTION 'User does not exist';
+  END IF;
+
+  -- Insert default categories, ignore if already exist
   INSERT INTO categories ("userId", name, type, color, "isDefault") VALUES
     -- Default expense categories
     (user_id, 'Insumos',          'expense', '#ef4444', true),
@@ -58,5 +73,9 @@ BEGIN
     (user_id, 'Subsidios',        'income',  '#84cc16', true),
     (user_id, 'Otros ingresos',   'income',  '#10b981', true)
   ON CONFLICT DO NOTHING;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the signup process
+    RAISE WARNING 'Failed to seed default categories for user %: %', user_id, SQLERRM;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

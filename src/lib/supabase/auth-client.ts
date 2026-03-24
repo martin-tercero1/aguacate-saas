@@ -1,6 +1,14 @@
 import { createClient } from './client'
 
-export async function signUp(email: string, password: string, name?: string) {
+export interface SignUpProfileData {
+  name?: string
+  phone?: string
+  farmName?: string
+  location?: string
+  hectares?: number
+}
+
+export async function signUp(email: string, password: string, profileData?: SignUpProfileData) {
   const supabase = createClient()
   
   const { data, error } = await supabase.auth.signUp({
@@ -8,7 +16,11 @@ export async function signUp(email: string, password: string, name?: string) {
     password,
     options: {
       data: {
-        name: name || '',
+        name: profileData?.name || '',
+        phone: profileData?.phone || '',
+        farmName: profileData?.farmName || '',
+        location: profileData?.location || '',
+        hectares: profileData?.hectares || null,
       }
     }
   })
