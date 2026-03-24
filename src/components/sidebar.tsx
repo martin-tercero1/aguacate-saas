@@ -147,22 +147,10 @@ function SidebarContent({
         ))}
       </nav>
 
-      {/* User / Profile section */}
+      {/* User / Profile section - Profile removed due to RLS configuration needed */}
       <div className="border-t border-sidebar-border p-3">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/dashboard/perfil"
-                  onClick={onNavigate}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground hover:opacity-80 transition-opacity"
-                >
-                  <User className="h-4 w-4" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Mi Perfil</TooltipContent>
-            </Tooltip>
             <ThemeToggle />
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
@@ -180,43 +168,37 @@ function SidebarContent({
             </Tooltip>
           </div>
         ) : (
-          <>
-            <Link
-              href="/dashboard/perfil"
-              onClick={onNavigate}
-              className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent group"
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                <User className="h-4 w-4" />
-              </div>
-              <div className="flex-1 truncate">
-                <p className="truncate text-sm font-medium text-sidebar-foreground group-hover:text-sidebar-accent-foreground">
-                  {user?.user_metadata?.name || 'Mi Perfil'}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-            </Link>
-            <div className="flex items-center justify-between">
-              <ThemeToggle />
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleSignOut}
-                    className="h-9 w-9 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="sr-only">Cerrar sesion</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Cerrar sesion</TooltipContent>
-              </Tooltip>
+          <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+              <User className="h-4 w-4" />
             </div>
-          </>
+            <div className="flex-1 truncate">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">
+                {user?.user_metadata?.name || 'Usuario'}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {user?.email}
+              </p>
+            </div>
+          </div>
         )}
+        <div className={cn('flex items-center gap-2', isCollapsed ? 'flex-col' : 'justify-between')}>
+          <ThemeToggle />
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="h-9 w-9 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="sr-only">Cerrar sesion</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={isCollapsed ? 'right' : 'top'}>Cerrar sesion</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   )
