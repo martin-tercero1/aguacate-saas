@@ -511,10 +511,21 @@ export class SupabaseService {
   async getCategories(userId: string, type?: string) {
     try {
       const supabase = await this.getClient()
+
+      // Auto-seed defaults if user has no categories yet
+      const { count } = await supabase
+        .from('categories')
+        .select('*', { count: 'exact', head: true })
+        .eq('"userId"', userId)
+
+      if (count === 0) {
+        await supabase.rpc('seed_default_categories', { user_id: userId })
+      }
+
       let query = supabase
         .from('categories')
         .select('*')
-        .eq('userId', userId)
+        .eq('"userId"', userId)
 
       if (type) {
         query = query.eq('type', type)
@@ -523,7 +534,7 @@ export class SupabaseService {
       const { data, error } = await query.order('name', { ascending: true })
 
       if (error) throw error
-      return data
+      return data ?? []
     } catch (error) {
       console.error('Error getting categories:', error)
       throw error
@@ -540,11 +551,11 @@ export class SupabaseService {
       const { data, error } = await supabase
         .from('categories')
         .insert([{
-          userId: userId,
+          '"userId"': userId,
           name: category.name,
           type: category.type,
           color: category.color || '#3b82f6',
-          isDefault: false
+          '"isDefault"': false
         }])
         .select()
         .single()
@@ -567,7 +578,7 @@ export class SupabaseService {
         .from('categories')
         .update(category)
         .eq('id', categoryId)
-        .eq('userId', userId)
+        .eq('"userId"', userId)
         .select()
         .single()
 
@@ -586,8 +597,8 @@ export class SupabaseService {
         .from('categories')
         .delete()
         .eq('id', categoryId)
-        .eq('userId', userId)
-        .eq('isDefault', false)
+        .eq('"userId"', userId)
+        .eq('"isDefault"', false)
 
       if (error) throw error
       return true
@@ -597,17 +608,17 @@ export class SupabaseService {
     }
   }
 
-  // Profile CRUD
+  // Profile CRUD — schema uses `id` = auth.users.id, columns: fullName, phone, farmName, location, hectares, avatarUrl
   async getProfile(userId: string) {
     try {
       const supabase = await this.getClient()
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('userId', userId)
-        .single()
+        .eq('id', userId)
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') throw error
+      if (error) throw error
       return data || null
     } catch (error) {
       console.error('Error getting profile:', error)
@@ -618,19 +629,16 @@ export class SupabaseService {
   async createProfile(userId: string, profile: {
     fullName?: string
     phone?: string
-    profilePhoto?: string
+    avatarUrl?: string
     farmName?: string
-    farmLocation?: string
-    farmSize?: number
+    location?: string
+    hectares?: number
   }) {
     try {
       const supabase = await this.getClient()
       const { data, error } = await supabase
         .from('profiles')
-        .insert([{
-          userId: userId,
-          ...profile
-        }])
+        .insert([{ id: userId, ...profile }])
         .select()
         .single()
 
@@ -645,17 +653,20 @@ export class SupabaseService {
   async updateProfile(userId: string, profile: {
     fullName?: string
     phone?: string
-    profilePhoto?: string
+    avatarUrl?: string
     farmName?: string
-    farmLocation?: string
-    farmSize?: number
+    location?: string
+    hectares?: number
   }) {
     try {
       const supabase = await this.getClient()
       const { data, error } = await supabase
         .from('profiles')
-        .update({ ...profile, updatedAt: new Date().toISOString() })
-        .eq('userId', userId)
+        .upsert({
+          id: userId,
+          ...profile,
+          '"updatedAt"': new Date().toISOString()
+        })
         .select()
         .single()
 

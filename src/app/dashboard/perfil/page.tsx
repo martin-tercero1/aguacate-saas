@@ -13,13 +13,12 @@ import { AlertCircle, CheckCircle2, User, MapPin } from 'lucide-react'
 
 interface Profile {
   id: string
-  userId: string
   fullName: string | null
   phone: string | null
-  profilePhoto: string | null
+  avatarUrl: string | null
   farmName: string | null
-  farmLocation: string | null
-  farmSize: number | null
+  location: string | null
+  hectares: number | null
   createdAt: string
   updatedAt: string | null
 }
@@ -36,10 +35,10 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
-    profilePhoto: '',
+    avatarUrl: '',
     farmName: '',
-    farmLocation: '',
-    farmSize: ''
+    location: '',
+    hectares: ''
   })
 
   useEffect(() => {
@@ -54,17 +53,18 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       const response = await fetch('/api/profile')
-      if (!response.ok) throw new Error('Error al cargar perfil')
-      const data = await response.json()
+      // 404 or null body = new user with no profile yet — not an error
+      if (!response.ok && response.status !== 404) throw new Error('Error al cargar perfil')
+      const data = response.status === 404 ? null : await response.json()
       setProfile(data || null)
       if (data) {
         setFormData({
           fullName: data.fullName || '',
           phone: data.phone || '',
-          profilePhoto: data.profilePhoto || '',
+          avatarUrl: data.avatarUrl || '',
           farmName: data.farmName || '',
-          farmLocation: data.farmLocation || '',
-          farmSize: data.farmSize ? data.farmSize.toString() : ''
+          location: data.location || '',
+          hectares: data.hectares ? data.hectares.toString() : ''
         })
       }
     } catch (error) {
@@ -86,7 +86,7 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          farmSize: formData.farmSize ? parseFloat(formData.farmSize) : null
+          hectares: formData.hectares ? parseFloat(formData.hectares) : null
         })
       })
 
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                 <Label className="text-xs text-muted-foreground">Nombre Completo</Label>
                 <p className="mt-1 font-medium">{profile?.fullName || 'No configurado'}</p>
               </div>
-              <div className="md:col-span-2">
+              <div>
                 <Label className="text-xs text-muted-foreground">Teléfono</Label>
                 <p className="mt-1 font-medium">{profile?.phone || 'No configurado'}</p>
               </div>
@@ -192,11 +192,11 @@ export default function ProfilePage() {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Ubicación</Label>
-                <p className="mt-1 font-medium">{profile?.farmLocation || 'No configurado'}</p>
+                <p className="mt-1 font-medium">{profile?.location || 'No configurado'}</p>
               </div>
               <div className="md:col-span-2">
                 <Label className="text-xs text-muted-foreground">Tamaño (hectáreas)</Label>
-                <p className="mt-1 font-medium">{profile?.farmSize ? `${profile.farmSize} ha` : 'No configurado'}</p>
+                <p className="mt-1 font-medium">{profile?.hectares ? `${profile.hectares} ha` : 'No configurado'}</p>
               </div>
             </div>
           </CardContent>
@@ -253,24 +253,24 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="farmLocation">Ubicación</Label>
+                <Label htmlFor="location">Ubicación</Label>
                 <Input
-                  id="farmLocation"
+                  id="location"
                   placeholder="Ciudad o región"
-                  value={formData.farmLocation}
-                  onChange={(e) => setFormData({ ...formData, farmLocation: e.target.value })}
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="farmSize">Tamaño (hectáreas)</Label>
+                <Label htmlFor="hectares">Tamaño (hectáreas)</Label>
                 <Input
-                  id="farmSize"
+                  id="hectares"
                   type="number"
                   step="0.1"
                   placeholder="Ej: 5.5"
-                  value={formData.farmSize}
-                  onChange={(e) => setFormData({ ...formData, farmSize: e.target.value })}
+                  value={formData.hectares}
+                  onChange={(e) => setFormData({ ...formData, hectares: e.target.value })}
                   className="mt-1"
                 />
               </div>

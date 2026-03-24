@@ -23,15 +23,15 @@ export async function POST(req: NextRequest) {
     if (!user?.id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const supabaseService = new SupabaseService()
-    const { fullName, phone, profilePhoto, farmName, farmLocation, farmSize } = await req.json()
+    const { fullName, phone, avatarUrl, farmName, location, hectares } = await req.json()
 
     const profile = await supabaseService.createProfile(user.id, {
       fullName,
       phone,
-      profilePhoto,
+      avatarUrl,
       farmName,
-      farmLocation,
-      farmSize: farmSize ? parseFloat(farmSize) : undefined
+      location,
+      hectares: hectares ? parseFloat(hectares) : undefined
     })
 
     return NextResponse.json(profile)
@@ -47,15 +47,15 @@ export async function PUT(req: NextRequest) {
     if (!user?.id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const supabaseService = new SupabaseService()
-    const { fullName, phone, profilePhoto, farmName, farmLocation, farmSize } = await req.json()
+    const { fullName, phone, avatarUrl, farmName, location, hectares } = await req.json()
 
     const profile = await supabaseService.updateProfile(user.id, {
       fullName,
       phone,
-      profilePhoto,
+      avatarUrl,
       farmName,
-      farmLocation,
-      farmSize: farmSize ? parseFloat(farmSize) : undefined
+      location,
+      hectares: hectares ? parseFloat(hectares) : undefined
     })
 
     return NextResponse.json(profile)
