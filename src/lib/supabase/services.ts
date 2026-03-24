@@ -506,4 +506,164 @@ export class SupabaseService {
       throw error
     }
   }
+
+  // Categories CRUD
+  async getCategories(userId: string, type?: string) {
+    try {
+      const supabase = await this.getClient()
+      let query = supabase
+        .from('categories')
+        .select('*')
+        .eq('userId', userId)
+
+      if (type) {
+        query = query.eq('type', type)
+      }
+
+      const { data, error } = await query.order('name', { ascending: true })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error getting categories:', error)
+      throw error
+    }
+  }
+
+  async createCategory(userId: string, category: {
+    name: string
+    type: string
+    color?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{
+          userId: userId,
+          name: category.name,
+          type: category.type,
+          color: category.color || '#3b82f6',
+          isDefault: false
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating category:', error)
+      throw error
+    }
+  }
+
+  async updateCategory(userId: string, categoryId: string, category: {
+    name?: string
+    color?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .update(category)
+        .eq('id', categoryId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating category:', error)
+      throw error
+    }
+  }
+
+  async deleteCategory(userId: string, categoryId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('userId', userId)
+        .eq('isDefault', false)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      throw error
+    }
+  }
+
+  // Profile CRUD
+  async getProfile(userId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('userId', userId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      return data || null
+    } catch (error) {
+      console.error('Error getting profile:', error)
+      throw error
+    }
+  }
+
+  async createProfile(userId: string, profile: {
+    fullName?: string
+    phone?: string
+    profilePhoto?: string
+    farmName?: string
+    farmLocation?: string
+    farmSize?: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([{
+          userId: userId,
+          ...profile
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating profile:', error)
+      throw error
+    }
+  }
+
+  async updateProfile(userId: string, profile: {
+    fullName?: string
+    phone?: string
+    profilePhoto?: string
+    farmName?: string
+    farmLocation?: string
+    farmSize?: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ ...profile, updatedAt: new Date().toISOString() })
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      throw error
+    }
+  }
 }

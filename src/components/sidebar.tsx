@@ -52,6 +52,11 @@ const navItems = [
     href: '/dashboard/actividades',
     icon: ClipboardList,
   },
+  {
+    title: 'Perfil',
+    href: '/dashboard/perfil',
+    icon: User,
+  },
 ]
 
 function NavLink({
