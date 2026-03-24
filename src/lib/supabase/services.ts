@@ -2,17 +2,9 @@ import { createClient } from './server'
 import { PostgrestError } from '@supabase/supabase-js'
 
 export class SupabaseService {
-  private supabase: any
-
-  constructor() {
-    this.supabase = null
-  }
-
+  // Always create fresh client to read cookies for auth context
   private async getClient() {
-    if (!this.supabase) {
-      this.supabase = await createClient()
-    }
-    return this.supabase
+    return await createClient()
   }
 
   // Dashboard data aggregation
@@ -664,8 +656,7 @@ export class SupabaseService {
         .from('profiles')
         .upsert({
           id: userId,
-          ...profile,
-          '"updatedAt"': new Date().toISOString()
+          ...profile
         })
         .select()
         .single()
