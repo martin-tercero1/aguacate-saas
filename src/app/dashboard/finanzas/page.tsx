@@ -94,11 +94,12 @@ export default function FinanzasPage() {
         fetch('/api/categories')
       ])
 
-      if (!expensesRes.ok || !incomesRes.ok || !categoriesRes.ok) throw new Error('Error fetching data')
+      if (!expensesRes.ok || !incomesRes.ok) throw new Error('Error fetching data')
 
       const expensesData = await expensesRes.json()
       const incomesData = await incomesRes.json()
-      const categoriesData = await categoriesRes.json()
+      // Categories may fail due to RLS - handle gracefully with defaults
+      const categoriesData = categoriesRes.ok ? await categoriesRes.json() : []
 
       setExpenses(expensesData || [])
       setIncomes(incomesData || [])
@@ -509,13 +510,28 @@ export default function FinanzasPage() {
       {/* Tab Content - Calendar View */}
       {activeView === 'calendario' && (
         <CalendarView
-          items={activeTab === 'gastos' ? expenses : incomes}
-          onAddDate={(date) => {
+          events={
+            activeTab === 'gastos'
+              ? expenses.map(exp => ({
+                  id: exp.id,
+                  date: exp.date,
+                  title: exp.category,
+                  subtitle: `C$${exp.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`
+                }))
+              : incomes.map(inc => ({
+                  id: inc.id,
+                  date: inc.date,
+                  title: inc.source,
+                  subtitle: `C$${inc.amount.toLocaleString('es-NI', { minimumFractionDigits: 2 })}`
+                }))
+          }
+          onDateClick={(date) => {
+            const dateStr = date.toISOString().split('T')[0]
             if (activeTab === 'gastos') {
-              setExpenseForm(prev => ({ ...prev, date }))
+              setExpenseForm(prev => ({ ...prev, date: dateStr }))
               setShowExpenseModal(true)
             } else {
-              setIncomeForm(prev => ({ ...prev, date }))
+              setIncomeForm(prev => ({ ...prev, date: dateStr }))
               setShowIncomeModal(true)
             }
           }}
