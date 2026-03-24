@@ -553,7 +553,7 @@ export default function FinanzasPage() {
         <div className="space-y-4">
           <div>
             <Label htmlFor="category">Categoría</Label>
-            <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
+            <Select value={expenseForm.category} onValueChange={(value) => { if (value) setExpenseForm({ ...expenseForm, category: value }) }}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona categoría" />
               </SelectTrigger>
@@ -617,7 +617,7 @@ export default function FinanzasPage() {
         <div className="space-y-4">
           <div>
             <Label htmlFor="source">Fuente</Label>
-            <Select value={incomeForm.source} onValueChange={(value) => setIncomeForm({ ...incomeForm, source: value })}>
+            <Select value={incomeForm.source} onValueChange={(value) => { if (value) setIncomeForm({ ...incomeForm, source: value }) }}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona fuente" />
               </SelectTrigger>
