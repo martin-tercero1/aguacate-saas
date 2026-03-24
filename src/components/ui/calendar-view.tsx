@@ -25,7 +25,7 @@ const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ]
 
-export function CalendarView({ events, onDateClick, onEventClick }: CalendarViewProps) {
+export function CalendarView({ events = [], onDateClick, onEventClick }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = React.useState(new Date())
   
   const year = currentDate.getFullYear()

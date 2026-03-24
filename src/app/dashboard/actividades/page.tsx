@@ -226,7 +226,7 @@ export default function ActividadesPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground md:text-3xl">
@@ -325,21 +325,21 @@ export default function ActividadesPage() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Tabs value={activeView} onValueChange={setActiveView}>
               <TabsList>
                 <TabsTrigger value="lista" className="gap-2">
                   <List className="h-4 w-4" />
-                  Lista
+                  <span className="hidden sm:inline">Lista</span>
                 </TabsTrigger>
                 <TabsTrigger value="calendario" className="gap-2">
                   <CalendarDays className="h-4 w-4" />
-                  Calendario
+                  <span className="hidden sm:inline">Calendario</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <Button onClick={() => { resetForm(); setShowModal(true) }} className="gap-2">
+            <Button onClick={() => { resetForm(); setShowModal(true) }} className="gap-2" size="sm">
               <Plus className="h-4 w-4" />
               Nueva Actividad
             </Button>

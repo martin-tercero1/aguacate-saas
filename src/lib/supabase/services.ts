@@ -2,17 +2,9 @@ import { createClient } from './server'
 import { PostgrestError } from '@supabase/supabase-js'
 
 export class SupabaseService {
-  private supabase: any
-
-  constructor() {
-    this.supabase = null
-  }
-
+  // Always create fresh client to read cookies for auth context
   private async getClient() {
-    if (!this.supabase) {
-      this.supabase = await createClient()
-    }
-    return this.supabase
+    return await createClient()
   }
 
   // Dashboard data aggregation
@@ -503,6 +495,176 @@ export class SupabaseService {
       return true
     } catch (error) {
       console.error('Error deleting activity:', error)
+      throw error
+    }
+  }
+
+  // Categories CRUD
+  async getCategories(userId: string, type?: string) {
+    try {
+      const supabase = await this.getClient()
+
+      // Auto-seed defaults if user has no categories yet
+      const { count } = await supabase
+        .from('categories')
+        .select('*', { count: 'exact', head: true })
+        .eq('userId', userId)
+
+      if (count === 0) {
+        await supabase.rpc('seed_default_categories', { user_id: userId })
+      }
+
+      let query = supabase
+        .from('categories')
+        .select('*')
+        .eq('userId', userId)
+
+      if (type) {
+        query = query.eq('type', type)
+      }
+
+      const { data, error } = await query.order('name', { ascending: true })
+
+      if (error) throw error
+      return data ?? []
+    } catch (error) {
+      console.error('Error getting categories:', error)
+      throw error
+    }
+  }
+
+  async createCategory(userId: string, category: {
+    name: string
+    type: string
+    color?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{
+          userId: userId,
+          name: category.name,
+          type: category.type,
+          color: category.color || '#3b82f6',
+          isDefault: false
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating category:', error)
+      throw error
+    }
+  }
+
+  async updateCategory(userId: string, categoryId: string, category: {
+    name?: string
+    color?: string
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .update(category)
+        .eq('id', categoryId)
+        .eq('userId', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating category:', error)
+      throw error
+    }
+  }
+
+  async deleteCategory(userId: string, categoryId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('userId', userId)
+        .eq('isDefault', false)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      throw error
+    }
+  }
+
+  // Profile CRUD — schema uses `id` = auth.users.id, columns: fullName, phone, farmName, location, hectares, avatarUrl
+  async getProfile(userId: string) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (error) throw error
+      return data || null
+    } catch (error) {
+      console.error('Error getting profile:', error)
+      throw error
+    }
+  }
+
+  async createProfile(userId: string, profile: {
+    fullName?: string
+    phone?: string
+    avatarUrl?: string
+    farmName?: string
+    location?: string
+    hectares?: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([{ id: userId, ...profile }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating profile:', error)
+      throw error
+    }
+  }
+
+  async updateProfile(userId: string, profile: {
+    fullName?: string
+    phone?: string
+    avatarUrl?: string
+    farmName?: string
+    location?: string
+    hectares?: number
+  }) {
+    try {
+      const supabase = await this.getClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          ...profile
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating profile:', error)
       throw error
     }
   }
