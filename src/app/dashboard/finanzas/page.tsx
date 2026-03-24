@@ -454,11 +454,14 @@ export default function FinanzasPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(activeTab === 'gastos' ? expenses : incomes).map((item) => (
+                  {(activeTab === 'gastos' ? expenses : incomes).map((item) => {
+                    const isExpense = activeTab === 'gastos'
+                    const label = isExpense ? (item as Expense).category : (item as Income).source
+                    return (
                     <TableRow key={item.id}>
                       <TableCell>
-                        <Badge variant="outline" className={getCategoryColor(activeTab === 'gastos' ? item.category : item.source)}>
-                          {activeTab === 'gastos' ? item.category : item.source}
+                        <Badge variant="outline" className={getCategoryColor(label)}>
+                          {label}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">{item.description || '-'}</TableCell>
@@ -470,14 +473,14 @@ export default function FinanzasPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              if (activeTab === 'gastos') {
+                              if (isExpense) {
                                 setEditingExpense(item as Expense)
                                 setExpenseForm(item as any)
                               } else {
                                 setEditingIncome(item as Income)
                                 setIncomeForm(item as any)
                               }
-                              activeTab === 'gastos' ? setShowExpenseModal(true) : setShowIncomeModal(true)
+                              isExpense ? setShowExpenseModal(true) : setShowIncomeModal(true)
                             }}
                           >
                             <Pencil className="h-4 w-4" />
@@ -487,9 +490,9 @@ export default function FinanzasPage() {
                             variant="ghost"
                             onClick={() => {
                               setDeleteTarget({
-                                type: activeTab === 'gastos' ? 'expense' : 'income',
+                                type: isExpense ? 'expense' : 'income',
                                 id: item.id,
-                                name: activeTab === 'gastos' ? item.category : item.source
+                                name: label
                               })
                               setShowDeleteModal(true)
                             }}
@@ -499,7 +502,8 @@ export default function FinanzasPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
