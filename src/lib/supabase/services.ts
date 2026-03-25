@@ -500,30 +500,23 @@ export class SupabaseService {
   }
 
   // Categories CRUD
+  // Now uses shared categories (userId IS NULL) + user's custom categories
   async getCategories(userId: string, type?: string) {
     try {
       const supabase = await this.getClient()
 
-      // Auto-seed defaults if user has no categories yet
-      const { count } = await supabase
-        .from('categories')
-        .select('*', { count: 'exact', head: true })
-        .eq('userId', userId)
-
-      if (count === 0) {
-        await supabase.rpc('seed_default_categories', { user_id: userId })
-      }
-
+      // Query both shared categories (userId IS NULL) and user's own custom categories
       let query = supabase
         .from('categories')
         .select('*')
-        .eq('userId', userId)
+        .or(`userId.is.null,userId.eq.${userId}`)
 
       if (type) {
         query = query.eq('type', type)
       }
 
-      const { data, error } = await query.order('name', { ascending: true })
+      // Order by isDefault desc (shared first), then by name
+      const { data, error } = await query.order('isDefault', { ascending: false }).order('name', { ascending: true })
 
       if (error) throw error
       return data ?? []
@@ -566,11 +559,14 @@ export class SupabaseService {
   }) {
     try {
       const supabase = await this.getClient()
+      
+      // Only allow updating user's own custom categories (not shared defaults)
+      // RLS enforces this, but explicit check for clarity
       const { data, error } = await supabase
         .from('categories')
-        .update(category)
+        .update({ ...category, updatedAt: new Date().toISOString() })
         .eq('id', categoryId)
-        .eq('userId', userId)
+        .eq('userId', userId)  // Must be user's own category (not shared)
         .select()
         .single()
 
@@ -585,12 +581,15 @@ export class SupabaseService {
   async deleteCategory(userId: string, categoryId: string) {
     try {
       const supabase = await this.getClient()
+      
+      // Only allow deleting user's own custom categories (not shared defaults)
+      // RLS will enforce this, but we add explicit checks for clarity
       const { error } = await supabase
         .from('categories')
         .delete()
         .eq('id', categoryId)
-        .eq('userId', userId)
-        .eq('isDefault', false)
+        .eq('userId', userId)  // Must be user's own category
+        .eq('isDefault', false) // Cannot delete defaults
 
       if (error) throw error
       return true
