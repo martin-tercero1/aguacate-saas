@@ -1,19 +1,13 @@
 -- =====================================================
 -- Migration: Convert to Shared Categories System
 -- =====================================================
--- This migration:
--- 1. Makes userId nullable to support shared (global) categories
--- 2. Clears all existing per-user categories (start fresh)
--- 3. Inserts shared default categories (userId = NULL)
--- 4. Drops the seed_default_categories function (no longer needed)
--- 5. Updates RLS policies for the new shared + private model
--- =====================================================
+-- This migration safely converts to a shared categories model.
 
 -- Step 1: Make userId nullable to support shared categories
 ALTER TABLE categories ALTER COLUMN "userId" DROP NOT NULL;
 
 -- Step 2: Clear all existing categories (start fresh as requested)
-DELETE FROM categories;
+DELETE FROM categories WHERE TRUE;
 
 -- Step 3: Insert shared default categories (userId = NULL means global/shared)
 INSERT INTO categories (id, "userId", name, type, color, "isDefault", "createdAt", "updatedAt") VALUES
@@ -34,19 +28,8 @@ INSERT INTO categories (id, "userId", name, type, color, "isDefault", "createdAt
 -- Step 4: Drop the seed_default_categories function (no longer needed)
 DROP FUNCTION IF EXISTS seed_default_categories(UUID);
 
--- Step 5: Update the signup trigger to only create profile (no category seeding)
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Create a profile row for the new user (categories are now shared, no seeding needed)
-  INSERT INTO public.profiles (id) VALUES (new.id)
-  ON CONFLICT (id) DO NOTHING;
-  
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Step 6: Drop existing category policies and create new ones for shared + private model
+-- Step 5: Update RLS policies for shared + private model
+-- First, drop existing policies
 DROP POLICY IF EXISTS "Users can read their own categories" ON categories;
 DROP POLICY IF EXISTS "Users can insert their own categories" ON categories;
 DROP POLICY IF EXISTS "Users can update their own categories" ON categories;
@@ -73,6 +56,6 @@ CREATE POLICY "Users can delete own categories"
   ON categories FOR DELETE
   USING (auth.uid() = "userId" AND "userId" IS NOT NULL AND "isDefault" = false);
 
--- Step 7: Add an index for better query performance
+-- Step 6: Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_categories_userid_type ON categories ("userId", type);
 CREATE INDEX IF NOT EXISTS idx_categories_shared ON categories (type) WHERE "userId" IS NULL;
