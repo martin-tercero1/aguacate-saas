@@ -415,7 +415,7 @@ export default function FinanzasPage() {
                     size="sm"
                   >
                     <Settings className="h-4 w-4" />
-                    <span className="hidden xs:inline">Categorías</span>
+                    <span className="hidden sm:inline">Categorías</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Gestionar categorías</TooltipContent>
@@ -430,7 +430,7 @@ export default function FinanzasPage() {
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden xs:inline">Nuevo</span> Gasto
+                <span className="hidden sm:inline">Nuevo</span> Gasto
               </Button>
             ) : (
               <Button
@@ -439,7 +439,7 @@ export default function FinanzasPage() {
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden xs:inline">Nuevo</span> Ingreso
+                <span className="hidden sm:inline">Nuevo</span> Ingreso
               </Button>
             )}
           </div>
