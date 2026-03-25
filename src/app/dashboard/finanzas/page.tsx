@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { CalendarView } from '@/components/ui/calendar-view'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpDown, List, CalendarDays, Pencil, Trash2, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 
@@ -404,15 +405,22 @@ export default function FinanzasPage() {
               </TabsList>
             </Tabs>
 
-            <Button
-              onClick={() => setShowCategoryModal(true)}
-              variant="outline"
-              className="gap-2"
-              size="sm"
-            >
-              <Settings className="h-4 w-4" />
-              <span className="hidden xs:inline">Categorías</span>
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setShowCategoryModal(true)}
+                    variant="outline"
+                    className="gap-2"
+                    size="sm"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="hidden xs:inline">Categorías</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Gestionar categorías</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {activeTab === 'gastos' ? (
               <Button
