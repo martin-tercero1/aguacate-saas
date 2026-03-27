@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Modal } from '@/components/ui/modal'
 import { useAuth } from '@/contexts/auth-context'
 import { AlertCircle, CheckCircle2, User, MapPin } from 'lucide-react'
+import { ProfileImageUpload } from '@/components/profile-image-upload'
 
 interface Profile {
   id: string
@@ -40,6 +41,22 @@ export default function ProfilePage() {
     location: '',
     hectares: ''
   })
+
+  // Handle avatar upload success - update local state immediately
+  const handleAvatarUploadSuccess = (avatarUrl: string) => {
+    setProfile(prev => prev ? { ...prev, avatarUrl } : null)
+    setFormData(prev => ({ ...prev, avatarUrl }))
+    setMessage({ type: 'success', text: 'Foto de perfil actualizada' })
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  // Handle avatar delete success
+  const handleAvatarDeleteSuccess = () => {
+    setProfile(prev => prev ? { ...prev, avatarUrl: null } : null)
+    setFormData(prev => ({ ...prev, avatarUrl: '' }))
+    setMessage({ type: 'success', text: 'Foto de perfil eliminada' })
+    setTimeout(() => setMessage(null), 3000)
+  }
 
   useEffect(() => {
     if (!user) {
@@ -138,6 +155,24 @@ export default function ProfilePage() {
       )}
 
       <div className="max-w-4xl space-y-6">
+        {/* Profile Image Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Foto de Perfil
+            </CardTitle>
+            <CardDescription>Tu imagen de perfil es privada y solo visible para ti</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <ProfileImageUpload
+              currentAvatarUrl={profile?.avatarUrl}
+              onUploadSuccess={handleAvatarUploadSuccess}
+              onDeleteSuccess={handleAvatarDeleteSuccess}
+            />
+          </CardContent>
+        </Card>
+
         {/* User Info Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
