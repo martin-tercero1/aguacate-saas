@@ -138,7 +138,7 @@ export default function SignUp() {
       }
 
       await signUp(formData.email, formData.password, profileData)
-      router.push('/auth/signin?message=Registro exitoso. Por favor, inicia sesión.')
+      router.push('/auth/signin?message=Registro exitoso. Por favor, inicia sesión, luego de confirmar tu email.')
     } catch (error: any) {
       setError(error.message || 'Error al registrarse. Por favor intenta nuevamente.')
     } finally {
